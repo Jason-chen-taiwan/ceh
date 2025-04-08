@@ -39,10 +39,10 @@ def extract_questions_and_answers(pdf_path):
             continue
             
         question_dict = {
-            'id': question_number,
+            'question_number': int(question_number),
             'full_text': clean_text(q.group(2).strip()),
-            'choices': {},
-            'question': ''
+            'choices': [],
+            'question_text': ''
         }
         
         # 輸出每個問題的原始文本以供診斷
@@ -61,13 +61,13 @@ def extract_questions_and_answers(pdf_path):
             first_choice_match = re.search(r'[A-E]\.', full_text)
             if (first_choice_match):
                 question_end = first_choice_match.start()
-                question_dict['question'] = clean_text(full_text[:question_end].strip())
+                question_dict['question_text'] = clean_text(full_text[:question_end].strip())
             else:
                 # 如果找不到選項，整個文字可能就是問題
-                question_dict['question'] = clean_text(full_text)
+                question_dict['question_text'] = clean_text(full_text)
         except Exception as e:
-            print(f"Error processing question {question_dict['id']}: {str(e)}")
-            question_dict['question'] = "Error extracting question text"
+            print(f"Error processing question {question_dict['question_number']}: {str(e)}")
+            question_dict['question_text'] = "Error extracting question text"
         
         # 提取選項
         choices_text = question_dict['full_text']
@@ -78,9 +78,11 @@ def extract_questions_and_answers(pdf_path):
         
         for choice in choices:
             choice_letter = choice.group(1)
-            choice_text = choice.group(2).strip()
-            choice_text = clean_text(choice_text)
-            question_dict['choices'][choice_letter] = choice_text
+            choice_text = clean_text(choice.group(2).strip())
+            question_dict['choices'].append({
+                'choice_letter': choice_letter,
+                'choice_text': choice_text
+            })
         
         # 提取答案（只處理單選題）
         answer_match = re.search(r'Answer:\s*([A-D])\s*(?:$|Explanation:)', 
@@ -89,6 +91,8 @@ def extract_questions_and_answers(pdf_path):
         # 如果是單選題才加入結果
         if answer_match and len(question_dict['choices']) == 4:
             question_dict['correct_answer'] = answer_match.group(1)
+            # 移除不需要的 full_text 字段
+            del question_dict['full_text']
             questions_and_answers.append(question_dict)
     
     # 改進診斷信息
@@ -114,7 +118,7 @@ if __name__ == "__main__":
     
     from db.db_handler import DatabaseHandler
     
-    pdf_path = r'C:\Users\yangs\Desktop\ceh\312-50v12 V12.95_2023.pdf'
+    pdf_path = r'/Users/chenyanxiang/ceh/312-50v12 V12.95_2023.pdf'
     print("Starting PDF processing...")
     print(f"Reading file: {pdf_path}")
     
@@ -123,7 +127,11 @@ if __name__ == "__main__":
     print(f"\nTotal questions extracted: {len(qa_list)}")
     
     # 初始化資料庫處理器
-    db_handler = DatabaseHandler("quiz_database.db")
+    try:
+        db_handler = DatabaseHandler()
+    except Exception as e:
+        print(f"Error initializing database: {str(e)}")
+        sys.exit(1)
     
     # 將問題寫入資料庫
     try:
@@ -131,14 +139,15 @@ if __name__ == "__main__":
         print(f"Successfully inserted {len(qa_list)} questions into the database.")
     except Exception as e:
         print(f"Error inserting questions into database: {str(e)}")
+        sys.exit(1)
     
     for qa in qa_list:
-        print(f"\nQuestion {qa['id']}:")
+        print(f"\nQuestion {qa['question_number']}:")
         try:
-            print(f"Question text: {qa['question']}")
+            print(f"Question text: {qa['question_text']}")
             print("Choices:")
-            for letter, text in qa['choices'].items():
-                print(f"{letter}. {text}")
+            for choice in qa['choices']:
+                print(f"{choice['choice_letter']}. {choice['choice_text']}")
             if 'correct_answer' in qa:
                 print(f"Correct Answer: {qa['correct_answer']}")
         except Exception as e:

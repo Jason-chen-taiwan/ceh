@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CEH 測驗系統</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <div class="quiz-box">
+        <div class="quiz-header">
+          <div class="score-board">
+            <div class="score correct">
+              正確: <span id="correct-count">0</span>
+            </div>
+            <div class="score incorrect">
+              錯誤: <span id="incorrect-count">0</span>
+            </div>
+          </div>
+          <h2>CEH 測驗</h2>
+          <div class="question-number">
+            問題 <span id="current-number">1</span>
+          </div>
+        </div>
+
+        <div class="quiz-content">
+          <div id="question-text" class="question-text"></div>
+
+          <div class="options">
+            <div class="option">
+              <input type="radio" name="answer" id="A" value="A" />
+              <label for="A" id="label-A"></label>
+            </div>
+            <div class="option">
+              <input type="radio" name="answer" id="B" value="B" />
+              <label for="B" id="label-B"></label>
+            </div>
+            <div class="option">
+              <input type="radio" name="answer" id="C" value="C" />
+              <label for="C" id="label-C"></label>
+            </div>
+            <div class="option">
+              <input type="radio" name="answer" id="D" value="D" />
+              <label for="D" id="label-D"></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="quiz-footer">
+          <div id="answer-feedback" class="feedback hidden"></div>
+          <button id="submit-btn" class="btn" disabled>提交答案</button>
+          <button id="next-btn" class="btn hidden">下一題</button>
+        </div>
+      </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  </body>
+</html>

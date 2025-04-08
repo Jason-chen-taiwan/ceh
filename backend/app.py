@@ -1,18 +1,41 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
-import sqlite3
+import mysql.connector
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, 
+    template_folder='../frontend/templates',  # 指定模板目錄
+    static_folder='../frontend/static'        # 指定靜態檔案目錄
+)
+
+# 允許所有來源的 CORS 請求
 CORS(app)
 
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'  # 改為允許所有來源
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
+# 處理 OPTIONS 請求
+@app.route('/api/questions/<int:question_number>', methods=['OPTIONS'])
+@app.route('/api/answers', methods=['OPTIONS'])
+def handle_options():
+    response = jsonify({'status': 'ok'})
+    return add_cors_headers(response)
+
 def get_db_connection():
-    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'quiz_database.db'))
+    db_config = {
+        'host': '127.0.0.1',
+        'port': 3306,
+        'user': 'Alpha',
+        'password': '&^%$#@1Secpaas',
+        'database': 'ceh_quiz'
+    }
     try:
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        conn = mysql.connector.connect(**db_config)
         return conn
-    except sqlite3.Error as e:
+    except mysql.connector.Error as e:
         print(f"Database connection error: {e}")
         return None
 
@@ -25,172 +48,206 @@ def test_db():
     try:
         conn = get_db_connection()
         if not conn:
-            return jsonify({'error': 'Database connection failed'}), 500
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM questions")
-        count = cursor.fetchone()[0]
+            return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT COUNT(*) as count FROM questions")
+        result = cursor.fetchone()
+        count = result['count']
+        
         cursor.close()
         conn.close()
-        return jsonify({"status": "success", "question_count": count})
+        return add_cors_headers(jsonify({"status": "success", "question_count": count}))
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return add_cors_headers(jsonify({"status": "error", "message": str(e)})), 500
 
-@app.route('/api/questions/<int:question_id>', methods=['GET'])
-def get_question(question_id):
+@app.route('/api/questions/<int:question_number>', methods=['GET'])
+def get_question(question_number):
     conn = get_db_connection()
     if not conn:
-        return jsonify({'error': 'Database connection failed'}), 500
+        return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
     
     try:
-        cursor = conn.cursor()
-        # Get question details
+        cursor = conn.cursor(dictionary=True)
+        
+        # 獲取問題詳情
         cursor.execute('''
-            SELECT q.*, GROUP_CONCAT(c.choice_letter || ':' || c.choice_text) as choices
-            FROM questions q 
-            LEFT JOIN choices c ON q.id = c.question_id
-            WHERE q.id = ?
-            GROUP BY q.id
-        ''', (question_id,))
+            SELECT id, question_number, question_text, correct_answer
+            FROM questions 
+            WHERE question_number = %s
+        ''', (question_number,))
         question = cursor.fetchone()
         
         if question is None:
-            return jsonify({'error': 'Question not found'}), 404
+            return add_cors_headers(jsonify({'error': 'Question not found'})), 404
             
-        # Parse the concatenated choices back into a list
-        choices_list = []
-        if question['choices']:
-            for choice in question['choices'].split(','):
-                letter, text = choice.split(':', 1)
-                choices_list.append({'letter': letter, 'text': text})
-            
-        return jsonify({
-            'id': question['id'],
+        # 獲取選項
+        cursor.execute('''
+            SELECT choice_letter, choice_text 
+            FROM choices 
+            WHERE question_id = %s 
+            ORDER BY choice_letter
+        ''', (question['id'],))
+        choices = cursor.fetchall()
+        
+        response = {
             'question_number': question['question_number'],
-            'question': question['question_text'],
-            'choices': choices_list,
+            'question_text': question['question_text'],
+            'choices': choices,
             'correct_answer': question['correct_answer']
-        })
+        }
+        
+        return add_cors_headers(jsonify(response))
     
-    except sqlite3.Error as e:
-        return jsonify({'error': str(e)}), 500
+    except mysql.connector.Error as e:
+        return add_cors_headers(jsonify({'error': str(e)})), 500
     finally:
-        conn.close()
+        if 'cursor' in locals():
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/questions/all', methods=['GET'])
 def get_all_questions():
     conn = get_db_connection()
     if not conn:
-        return jsonify({'error': 'Database connection failed'}), 500
+        return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
     
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+        
+        # 獲取所有問題
         cursor.execute('''
-            SELECT q.*, GROUP_CONCAT(c.choice_letter || ':' || c.choice_text) as choices
-            FROM questions q 
-            LEFT JOIN choices c ON q.id = c.question_id
-            GROUP BY q.id
+            SELECT id, question_number, question_text
+            FROM questions 
+            ORDER BY question_number
         ''')
         questions = cursor.fetchall()
         
         result = []
         for q in questions:
-            choices_list = []
-            if q['choices']:
-                for choice in q['choices'].split(','):
-                    letter, text = choice.split(':', 1)
-                    choices_list.append({'letter': letter, 'text': text})
+            # 獲取每個問題的選項
+            cursor.execute('''
+                SELECT choice_letter, choice_text 
+                FROM choices 
+                WHERE question_id = %s 
+                ORDER BY choice_letter
+            ''', (q['id'],))
+            choices = cursor.fetchall()
             
             question_data = {
-                'id': q['id'],
                 'question_number': q['question_number'],
-                'question': q['question_text'],
-                'choices': choices_list
+                'question_text': q['question_text'],
+                'choices': choices
             }
             result.append(question_data)
         
-        return jsonify(result)
+        return add_cors_headers(jsonify(result))
     
-    except sqlite3.Error as e:
+    except mysql.connector.Error as e:
         print(f"Database error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return add_cors_headers(jsonify({'error': str(e)})), 500
     finally:
-        conn.close()
+        if 'cursor' in locals():
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/questions/random', methods=['GET'])
 def get_random_question():
     conn = get_db_connection()
     if not conn:
-        return jsonify({'error': 'Database connection failed'}), 500
+        return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
     
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
+        
+        # 隨機獲取一個問題
         cursor.execute('''
-            SELECT q.*, GROUP_CONCAT(c.choice_letter || ':' || c.choice_text) as choices
-            FROM questions q 
-            LEFT JOIN choices c ON q.id = c.question_id
-            GROUP BY q.id
-            ORDER BY RANDOM() 
+            SELECT id, question_number, question_text 
+            FROM questions 
+            ORDER BY RAND() 
             LIMIT 1
         ''')
         question = cursor.fetchone()
         
         if question is None:
-            return jsonify({'error': 'No questions found'}), 404
+            return add_cors_headers(jsonify({'error': 'No questions found'})), 404
         
-        choices_list = []
-        if question['choices']:
-            try:
-                for choice in question['choices'].split(','):
-                    if ':' in choice:  # 確保選項格式正確
-                        letter, text = choice.split(':', 1)
-                        choices_list.append({'letter': letter, 'text': text})
-            except Exception as e:
-                print(f"Error parsing choices: {e}")
-                # 如果解析失敗，直接查詢 choices 表
-                cursor.execute('''
-                    SELECT choice_letter, choice_text 
-                    FROM choices 
-                    WHERE question_id = ?
-                    ORDER BY choice_letter
-                ''', (question['id'],))
-                choices = cursor.fetchall()
-                choices_list = [{'letter': c['choice_letter'], 'text': c['choice_text']} for c in choices]
+        # 獲取該問題的選項
+        cursor.execute('''
+            SELECT choice_letter, choice_text 
+            FROM choices 
+            WHERE question_id = %s 
+            ORDER BY choice_letter
+        ''', (question['id'],))
+        choices = cursor.fetchall()
         
-        return jsonify({
-            'id': question['id'],
+        response = {
             'question_number': question['question_number'],
-            'question': question['question_text'],
-            'choices': choices_list
-        })
+            'question_text': question['question_text'],
+            'choices': choices
+        }
+        
+        return add_cors_headers(jsonify(response))
     
-    except sqlite3.Error as e:
+    except mysql.connector.Error as e:
         print(f"Database error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return add_cors_headers(jsonify({'error': str(e)})), 500
     finally:
-        conn.close()
+        if 'cursor' in locals():
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/answers', methods=['POST'])
 def check_answer():
     data = request.json
-    question_id = data.get('questionId')
+    question_number = data.get('questionNumber')
     user_answer = data.get('answer')
+    
+    if not question_number or not user_answer:
+        return add_cors_headers(jsonify({'error': 'Missing required fields'})), 400
     
     conn = get_db_connection()
     if not conn:
-        return jsonify({'error': 'Database connection failed'}), 500
-    cursor = conn.cursor()
-    cursor.execute("SELECT correct_answer FROM questions WHERE id = ?", (question_id,))
-    result = cursor.fetchone()
-    cursor.close()
-    conn.close()
+        return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
     
-    if result:
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT correct_answer 
+            FROM questions 
+            WHERE question_number = %s
+        ''', (question_number,))
+        result = cursor.fetchone()
+        
+        if not result:
+            return add_cors_headers(jsonify({'error': 'Question not found'})), 404
+        
         is_correct = result['correct_answer'] == user_answer
-        return jsonify({
+        return add_cors_headers(jsonify({
             'correct': is_correct,
-            'correctAnswer': result['correct_answer']
-        })
-    return jsonify({'error': 'Question not found'}), 404
+            'correct_answer': result['correct_answer']
+        }))
+        
+    except mysql.connector.Error as e:
+        return add_cors_headers(jsonify({'error': str(e)})), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if conn:
+            conn.close()
+
+# 新增前端路由
+@app.route('/quiz')
+def quiz():
+    return render_template('quiz.html')
+
+# 確保所有回應都添加 CORS 標頭
+@app.after_request
+def after_request(response):
+    return add_cors_headers(response)
 
 if __name__ == '__main__':
     app.run(debug=True)
