@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>登入 - CEH 测试系统</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      .container {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        width: 350px;
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 30px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #555;
+      }
+      input[type="text"],
+      input[type="password"],
+      input[type="email"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      button {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px;
+        width: 100%;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-top: 10px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      .toggle-form {
+        text-align: center;
+        margin-top: 20px;
+      }
+      .toggle-form a {
+        color: #4caf50;
+        text-decoration: none;
+      }
+      .toggle-form a:hover {
+        text-decoration: underline;
+      }
+      .error-message {
+        color: #ff0000;
+        margin-top: 15px;
+        text-align: center;
+      }
+      .info-message {
+        color: #4e73df;
+        margin: 15px 0;
+        text-align: center;
+        padding: 10px;
+        background-color: #f8f9fc;
+        border-radius: 4px;
+        border-left: 4px solid #4e73df;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="login-form">
+        <h1>用戶登入</h1>
+        <div class="error-message" id="login-error"></div>
+        {% if request.args.get('next') == '/quiz' or request.path == '/quiz' %}
+        <div class="info-message">登入後才能進行測驗</div>
+        {% endif %}
+        <div class="form-group">
+          <label for="login-email">電子郵件</label>
+          <input type="email" id="login-email" placeholder="輸入電子郵件" />
+        </div>
+        <div class="form-group">
+          <label for="login-password">密碼</label>
+          <input type="password" id="login-password" placeholder="輸入密碼" />
+        </div>
+        <button id="login-button">登入</button>
+        <div class="toggle-form">
+          <span>還沒有帳戶？</span>
+          <a href="#" id="show-register">註冊新帳戶</a>
+        </div>
+      </div>
+
+      <div id="register-form" style="display: none">
+        <h1>用戶註冊</h1>
+        <div class="error-message" id="register-error"></div>
+        <div class="form-group">
+          <label for="register-username">用戶名</label>
+          <input type="text" id="register-username" placeholder="選擇用戶名" />
+        </div>
+        <div class="form-group">
+          <label for="register-email">電子郵件</label>
+          <input type="email" id="register-email" placeholder="輸入電子郵件" />
+        </div>
+        <div class="form-group">
+          <label for="register-password">密碼</label>
+          <input
+            type="password"
+            id="register-password"
+            placeholder="設置密碼"
+          />
+        </div>
+        <div class="form-group">
+          <label for="register-confirm-password">確認密碼</label>
+          <input
+            type="password"
+            id="register-confirm-password"
+            placeholder="再次輸入密碼"
+          />
+        </div>
+        <button id="register-button">註冊</button>
+        <div class="toggle-form">
+          <span>已有帳戶？</span> <a href="#" id="show-login">登入</a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("show-register")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          document.getElementById("login-form").style.display = "none";
+          document.getElementById("register-form").style.display = "block";
+        });
+
+      document
+        .getElementById("show-login")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          document.getElementById("register-form").style.display = "none";
+          document.getElementById("login-form").style.display = "block";
+        });
+
+      // 註冊功能
+      document
+        .getElementById("register-button")
+        .addEventListener("click", function () {
+          const username = document.getElementById("register-username").value;
+          const email = document.getElementById("register-email").value;
+          const password = document.getElementById("register-password").value;
+          const confirmPassword = document.getElementById(
+            "register-confirm-password"
+          ).value;
+          const errorElement = document.getElementById("register-error");
+
+          errorElement.textContent = "";
+
+          // 驗證表單
+          if (!username || !email || !password || !confirmPassword) {
+            errorElement.textContent = "所有欄位都必須填寫";
+            return;
+          }
+
+          if (password !== confirmPassword) {
+            errorElement.textContent = "兩次輸入的密碼不一致";
+            return;
+          } // 發送註冊請求
+          fetch("/api/register", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include", // 包含認證信息
+            body: JSON.stringify({
+              username: username,
+              email: email,
+              password: password,
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.error) {
+                errorElement.textContent = data.error;
+              } else {
+                alert("註冊成功！請登入。");
+                document.getElementById("register-form").style.display = "none";
+                document.getElementById("login-form").style.display = "block";
+              }
+            })
+            .catch((error) => {
+              errorElement.textContent = "發生錯誤，請稍後再試";
+              console.error("Error:", error);
+            });
+        }); // 登入功能
+      document
+        .getElementById("login-button")
+        .addEventListener("click", function () {
+          const email = document.getElementById("login-email").value;
+          const password = document.getElementById("login-password").value;
+          const errorElement = document.getElementById("login-error");
+
+          errorElement.textContent = "";
+
+          // 驗證表單
+          if (!email || !password) {
+            errorElement.textContent = "電子郵件和密碼不能為空";
+            return;
+          } // 獲取URL參數中的next值
+          const urlParams = new URLSearchParams(window.location.search);
+          const nextUrl = urlParams.get("next"); // 發送登入請求
+          console.log("嘗試登入用戶:", email);
+
+          fetch("/api/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include", // 包含認證信息
+            body: JSON.stringify({
+              email: email,
+              password: password,
+              next: nextUrl,
+            }),
+          })
+            .then((response) => {
+              console.log("登入回應狀態:", response.status);
+              if (!response.ok) {
+                if (response.status === 401) {
+                  errorElement.textContent = "電子郵件或密碼錯誤";
+                  throw new Error("電子郵件或密碼錯誤");
+                } else {
+                  throw new Error("Login failed: " + response.status);
+                }
+              }
+              return response.json();
+            })
+            .then((data) => {
+              if (data.error) {
+                errorElement.textContent = data.error;
+              } else {
+                // 儲存用戶資料到 localStorage
+                localStorage.setItem("user", JSON.stringify(data.user));
+                // 登入成功，跳轉到指定頁面
+                window.location.href = data.redirect || "/dashboard";
+              }
+            })
+            .catch((error) => {
+              console.error("登入錯誤:", error);
+              if (!errorElement.textContent) {
+                errorElement.textContent =
+                  "發生錯誤，請稍後再試: " + error.message;
+              }
+            });
+        }); // 添加一個測試端點來檢查會話狀態
+      function checkSessionStatus() {
+        fetch("/api/user/check-session", {
+          credentials: "include",
+        })
+          .then((response) => {
+            console.log("會話狀態檢查回應:", response.status);
+            return response
+              .json()
+              .catch((e) => ({ status: "error", error: e.message }));
+          })
+          .then((data) => {
+            console.log("會話狀態:", data);
+            // 如果已經登入，則儲存用戶資料並重定向到儀表板
+            if (data.status === "authenticated") {
+              localStorage.setItem(
+                "user",
+                JSON.stringify({
+                  id: data.user_id,
+                  username: data.username,
+                })
+              );
+              window.location.href = "/dashboard";
+            }
+          })
+          .catch((error) => {
+            console.error("檢查會話錯誤:", error);
+          });
+      }
+
+      // 登入按鈕點擊後添加檢查
+      document
+        .getElementById("login-button")
+        .addEventListener("click", function () {
+          // 在2秒後檢查會話狀態
+          setTimeout(checkSessionStatus, 2000);
+        });
+
+      // 頁面加載時檢查會話狀態
+      document.addEventListener("DOMContentLoaded", function () {
+        // 檢查會話狀態，如果已登入則重定向到儀表板
+        checkSessionStatus();
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,96 @@
+/* Main styles for the homepage */
+:root {
+  --primary: #4e73df;
+  --secondary: #5a5c69;
+  --success: #1cc88a;
+  --info: #36b9cc;
+  --warning: #f6c23e;
+  --danger: #e74a3b;
+  --light: #f8f9fc;
+  --dark: #282d3f;
+  --gradient-primary: linear-gradient(135deg, #6e8efb, #4e73df);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Noto Sans TC", sans-serif;
+  line-height: 1.6;
+  color: var(--secondary);
+  background-color: var(--light);
+  overflow-x: hidden;
+  padding: 0;
+  margin: 0;
+  display: block;
+  min-height: 100vh;
+  align-items: initial;
+  justify-content: initial;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  width: 100%;
+}
+
+/* Button styles */
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+  text-align: center;
+  margin-left: 15px;
+  cursor: pointer;
+}
+
+.btn-outline {
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  background: transparent;
+}
+
+.btn-outline:hover {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(78, 115, 223, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(78, 115, 223, 0.6);
+}
+
+/* Section padding */
+section {
+  padding: 80px 0;
+}
+
+/* Username display in header */
+.username {
+  font-weight: 600;
+  color: var(--primary);
+  margin-right: 10px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Form button reset */
+form button.btn {
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}

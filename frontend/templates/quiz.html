@@ -8,9 +8,76 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <style>
+      .welcome-message {
+        background-color: #e8f4fd;
+        border-left: 4px solid #4e73df;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+      }
+      .welcome-message h3 {
+        color: #2c3e50;
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+      .welcome-message p {
+        margin-bottom: 10px;
+      }
+      .welcome-message ul {
+        padding-left: 20px;
+      }
+      .welcome-message li {
+        margin-bottom: 5px;
+      }
+    </style>
   </head>
   <body>
     <div class="container">
+      <div class="welcome-message">
+        <h3>歡迎使用 CEH Pro 測驗系統</h3>
+        <p>此測驗平台需要登入才能使用。登入後您可以：</p>
+        <ul>
+          <li>參加 CEH 測驗</li>
+          <li>檢視您的學習進度</li>
+          <li>收集並複習錯題</li>
+        </ul>
+      </div>
+      <div class="user-info" style="text-align: right; margin-bottom: 10px">
+        <span id="username-display"></span>
+        <a
+          href="/dashboard"
+          id="dashboard-link"
+          style="
+            margin-left: 10px;
+            text-decoration: none;
+            color: #4caf50;
+            display: none;
+          "
+          >個人中心</a
+        >
+        <button
+          id="logout-btn"
+          style="
+            display: none;
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+          "
+        >
+          登出
+        </button>
+        <a
+          href="/login"
+          id="login-link"
+          style="margin-left: 10px; text-decoration: none; color: #4caf50"
+          >登入</a
+        >
+      </div>
       <div class="quiz-box">
         <div class="quiz-header">
           <div class="score-board">
@@ -58,5 +125,6 @@
       </div>
     </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
   </body>
 </html>

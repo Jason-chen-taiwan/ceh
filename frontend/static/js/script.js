@@ -177,6 +177,59 @@ document.addEventListener("DOMContentLoaded", function () {
     updateScore();
   }
 
+  // 向伺服器提交答案
+  function submitAnswer(answer) {
+    const API_URL = `${API_BASE_URL}/answers`;
+
+    fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // 確保發送會話Cookie
+      body: JSON.stringify({
+        questionNumber: currentQuestion,
+        answer: answer,
+      }),
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        // 顯示反饋
+        elements.feedbackDiv.classList.remove("hidden");
+        if (result.correct) {
+          elements.feedbackDiv.innerHTML = `<span class="correct">正確!</span>`;
+          elements.feedbackDiv.className = "feedback correct";
+          correctCount++;
+        } else {
+          elements.feedbackDiv.innerHTML = `<span class="wrong">錯誤!</span> 正確答案是: ${result.correct_answer}`;
+          elements.feedbackDiv.className = "feedback wrong";
+          incorrectCount++;
+
+          // 儲存錯題記錄
+          if (!isReviewMode) {
+            wrongAnswers.push({
+              questionNumber: currentQuestion,
+              questionText: elements.questionText.textContent,
+              userAnswer: selectedAnswer,
+              correctAnswer: result.correct_answer,
+            });
+          }
+          // 添加到當前批次的錯題
+          currentBatchWrongAnswers.push({
+            questionNumber: currentQuestion,
+            questionText: elements.questionText.textContent,
+            userAnswer: selectedAnswer,
+            correctAnswer: result.correct_answer,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        elements.feedbackDiv.innerHTML = `<span class="wrong">提交答案時發生錯誤，請稍後再試。</span>`;
+        elements.feedbackDiv.className = "feedback wrong";
+      });
+  }
+
   // 綁定事件監聽器
   document.querySelectorAll('input[name="answer"]').forEach((radio) => {
     radio.addEventListener("change", () => {

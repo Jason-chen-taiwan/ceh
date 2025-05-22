@@ -1,0 +1,42 @@
+/* 用戶操作區域樣式 */
+.user-actions {
+  display: flex;
+  align-items: center;
+  margin-left: 20px;
+}
+
+#username-display {
+  margin-right: 15px;
+  font-weight: 500;
+  color: var(--dark);
+}
+
+#logout-btn {
+  cursor: pointer;
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  padding: 8px 15px;
+  border-radius: 50px;
+  font-weight: 500;
+  transition: all 0.3s;
+  text-align: center;
+}
+
+#logout-btn:hover {
+  background-color: var(--primary);
+  color: white;
+}
+
+/* 適配移動設備 */
+@media (max-width: 768px) {
+  .header-container {
+    flex-direction: column;
+  }
+
+  .user-actions {
+    margin-top: 15px;
+    margin-left: 0;
+    justify-content: center;
+  }
+}

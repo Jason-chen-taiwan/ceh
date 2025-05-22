@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CEH Pro | 專業資安測驗平台</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/homepage.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/header.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/sections.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/footer.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/responsive.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/user-actions.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header id="header">
+      <div class="container header-container">
+        <div class="logo">
+          <h1>CEH Pro</h1>
+        </div>
+        <nav>
+          <ul>
+            <li><a href="/">首頁</a></li>
+            <li><a href="/quiz">測驗平台</a></li>
+            <li><a href="#features">特色功能</a></li>
+            <li><a href="#pricing">方案價格</a></li>
+            {% if 'user_id' in session %}
+            <li><a href="/dashboard">個人儀表板</a></li>
+            {% endif %}
+          </ul>
+        </nav>
+        <div class="user-actions">
+          {% if 'user_id' in session %}
+          <span id="username-display">歡迎, {{ session.username }}!</span>
+          <button id="logout-btn" class="btn btn-outline">登出</button>
+          {% else %}
+          <a href="/login" class="btn btn-outline">登入</a>
+          <a href="/register" class="btn btn-primary">註冊</a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="container hero-content">
+        <h1>專業的 CEH 認證備考解決方案</h1>
+        <p>
+          透過先進的學習分析和個人化測驗系統，提升備考效率，讓您以最短時間通過
+          Certified Ethical Hacker 認證考試
+        </p>
+        <div class="hero-buttons">
+          {% if 'user_id' in session %}
+          <a href="/quiz" class="btn btn-primary">開始免費測驗</a>
+          {% else %}
+          <a href="/login" class="btn btn-primary">登入以開始測驗</a>
+          {% endif %}
+          <a href="#learn-more" class="btn btn-outline">了解更多</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-item">
+            <div class="stat-number">10,000+</div>
+            <div class="stat-label">活躍學員</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">1,200+</div>
+            <div class="stat-label">精選題目</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">95%</div>
+            <div class="stat-label">通過率</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="features" class="features-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>專業功能，助您備考成功</h2>
+          <p>
+            我們的平台提供全方位的學習和測驗功能，讓您的 CEH 認證之路更加順暢
+          </p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-database"></i>
+            </div>
+            <h3>全面題庫</h3>
+            <p>
+              超過 1,200 道精選考題，涵蓋 CEH 認證考試的所有重要主題和知識點
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>進度分析</h3>
+            <p>智能學習分析系統，追蹤您的學習進度，找出需要加強的領域</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-lightbulb"></i>
+            </div>
+            <h3>錯題集</h3>
+            <p>自動收集您的錯題，幫助您集中精力攻克弱點，提高複習效率</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-clock"></i>
+            </div>
+            <h3>模擬考試</h3>
+            <p>模擬真實考試環境和時間限制，幫助您提前適應考試壓力</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-mobile-alt"></i>
+            </div>
+            <h3>隨時學習</h3>
+            <p>響應式設計，支援手機、平板和電腦，讓您隨時隨地都能學習</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-sync-alt"></i>
+            </div>
+            <h3>定期更新</h3>
+            <p>題庫內容定期更新，確保與最新的 CEH 考試要求保持同步</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pricing" class="pricing-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>靈活定價，滿足不同需求</h2>
+          <p>無論您是個人學習者還是企業培訓需求，我們都有適合您的方案</p>
+        </div>
+        <div class="pricing-cards">
+          <div class="pricing-card">
+            <div class="pricing-header">
+              <h3>免費方案</h3>
+              <div class="price">NT$0<span>/月</span></div>
+            </div>
+            <div class="pricing-features">
+              <ul>
+                <li><i class="fas fa-check"></i> 每日 10 題免費測驗</li>
+                <li><i class="fas fa-check"></i> 基本學習進度追蹤</li>
+                <li><i class="fas fa-check"></i> 訪問基礎題庫 (200 題)</li>
+                <li><i class="fas fa-times"></i> 進階分析功能</li>
+                <li><i class="fas fa-times"></i> 錯題集與重點複習</li>
+                <li><i class="fas fa-times"></i> 模擬考試</li>
+              </ul>
+            </div>
+            <div class="pricing-action">
+              <a href="/register" class="btn btn-outline">免費註冊</a>
+            </div>
+          </div>
+          <div class="pricing-card highlighted">
+            <div class="ribbon">最受歡迎</div>
+            <div class="pricing-header">
+              <h3>專業方案</h3>
+              <div class="price">NT$499<span>/月</span></div>
+            </div>
+            <div class="pricing-features">
+              <ul>
+                <li><i class="fas fa-check"></i> 無限制題目測驗</li>
+                <li><i class="fas fa-check"></i> 全面學習進度分析</li>
+                <li><i class="fas fa-check"></i> 完整題庫 (1,200+ 題)</li>
+                <li><i class="fas fa-check"></i> 個人化錯題集</li>
+                <li><i class="fas fa-check"></i> 每月 3 次模擬考試</li>
+                <li><i class="fas fa-check"></i> 優先電子郵件支援</li>
+              </ul>
+            </div>
+            <div class="pricing-action">
+              <a href="/register?plan=pro" class="btn btn-primary">立即開始</a>
+            </div>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-header">
+              <h3>企業方案</h3>
+              <div class="price">NT$1,999<span>/月</span></div>
+            </div>
+            <div class="pricing-features">
+              <ul>
+                <li><i class="fas fa-check"></i> 最多 10 位使用者</li>
+                <li><i class="fas fa-check"></i> 所有專業方案功能</li>
+                <li><i class="fas fa-check"></i> 團隊進度追蹤與報告</li>
+                <li><i class="fas fa-check"></i> 自定義測驗和題目</li>
+                <li><i class="fas fa-check"></i> 無限次模擬考試</li>
+                <li><i class="fas fa-check"></i> 專屬客戶經理</li>
+              </ul>
+            </div>
+            <div class="pricing-action">
+              <a href="/contact" class="btn btn-outline">聯絡我們</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="testimonials-section">
+      <div class="container">
+        <div class="section-header">
+          <h2>學員心聲</h2>
+          <p>看看他們是如何透過我們的平台成功通過 CEH 認證考試的</p>
+        </div>
+        <div class="testimonials-slider">
+          <div class="testimonial">
+            <div class="testimonial-content">
+              <p>
+                「我在一個月內通過了 CEH 考試，這要感謝 CEH Pro
+                提供的全面題庫和分析系統。它幫助我找出了我的薄弱環節，讓我能夠有針對性地複習。」
+              </p>
+            </div>
+            <div class="testimonial-author">
+              <img
+                src="{{ url_for('static', filename='img/user1.jpg') }}"
+                alt="張小明"
+                onerror="this.src='https://via.placeholder.com/60'"
+              />
+              <div class="author-info">
+                <h4>張小明</h4>
+                <p>資安工程師 | 台北</p>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial">
+            <div class="testimonial-content">
+              <p>
+                「作為一名網路安全初學者，CEH Pro
+                平台上清晰的解析和豐富的題庫幫助我建立了紮實的基礎知識。使用三個月後，我順利通過了考試！」
+              </p>
+            </div>
+            <div class="testimonial-author">
+              <img
+                src="{{ url_for('static', filename='img/user2.jpg') }}"
+                alt="林美玲"
+                onerror="this.src='https://via.placeholder.com/60'"
+              />
+              <div class="author-info">
+                <h4>林美玲</h4>
+                <p>系統管理員 | 台中</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <div class="container">
+        <h2>準備好提升您的資安技能了嗎？</h2>
+        <p>立即加入 10,000+ 位專業人士的行列，開始您的 CEH 認證之旅</p>
+        <div class="cta-buttons">
+          <a href="/register" class="btn btn-primary">免費開始使用</a>
+          <a href="/contact" class="btn btn-outline">聯絡我們</a>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-brand">
+            <h3>CEH Pro</h3>
+            <p>專業的 CEH 認證備考平台，助您輕鬆通過考試</p>
+            <div class="social-icons">
+              <a href="#"><i class="fab fa-facebook-f"></i></a>
+              <a href="#"><i class="fab fa-twitter"></i></a>
+              <a href="#"><i class="fab fa-linkedin-in"></i></a>
+              <a href="#"><i class="fab fa-instagram"></i></a>
+            </div>
+          </div>
+          <div class="footer-links">
+            <div class="footer-links-column">
+              <h4>產品</h4>
+              <ul>
+                <li><a href="/quiz">測驗平台</a></li>
+                <li><a href="/features">功能介紹</a></li>
+                <li><a href="/pricing">價格方案</a></li>
+                <li><a href="/updates">最新更新</a></li>
+              </ul>
+            </div>
+            <div class="footer-links-column">
+              <h4>支援</h4>
+              <ul>
+                <li><a href="/help">幫助中心</a></li>
+                <li><a href="/faq">常見問題</a></li>
+                <li><a href="/contact">聯絡我們</a></li>
+                <li><a href="/feedback">意見反饋</a></li>
+              </ul>
+            </div>
+            <div class="footer-links-column">
+              <h4>公司</h4>
+              <ul>
+                <li><a href="/about">關於我們</a></li>
+                <li><a href="/careers">加入我們</a></li>
+                <li><a href="/blog">部落格</a></li>
+                <li><a href="/press">媒體報導</a></li>
+              </ul>
+            </div>
+            <div class="footer-links-column">
+              <h4>法律</h4>
+              <ul>
+                <li><a href="/terms">服務條款</a></li>
+                <li><a href="/privacy">隱私政策</a></li>
+                <li><a href="/cookies">Cookie 政策</a></li>
+                <li><a href="/security">安全政策</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2025 CEH Pro. 保留所有權利。</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+      // 滾動時變更導航欄樣式
+      window.addEventListener("scroll", function () {
+        const header = document.getElementById("header");
+        if (window.scrollY > 50) {
+          header.classList.add("scrolled");
+        } else {
+          header.classList.remove("scrolled");
+        }
+      }); // 添加登出功能
+      const logoutBtn = document.getElementById("logout-btn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", function () {
+          fetch("/api/logout", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include", // 包含認證信息
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              // 清除本地儲存的用戶資料
+              localStorage.removeItem("user");
+              window.location.href = data.redirect || "/"; // 使用後端返回的重定向地址或默認跳轉到首頁
+            })
+            .catch((error) => {
+              console.error("登出失敗:", error);
+              // 即使出錯也清除本地儲存並跳轉到首頁
+              localStorage.removeItem("user");
+              window.location.href = "/"; // 即使出錯也跳轉到首頁
+            });
+        });
+      }
+
+      // 當頁面加載時，檢查會話狀態並同步 localStorage
+      document.addEventListener("DOMContentLoaded", function () {
+        fetch("/api/user/check-session", {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error("未登入或會話已過期");
+          })
+          .then((data) => {
+            // 用戶已登入，確保本地存儲也有用戶資料
+            if (data.status === "authenticated") {
+              localStorage.setItem(
+                "user",
+                JSON.stringify({
+                  id: data.user_id,
+                  username: data.username,
+                })
+              );
+            }
+          })
+          .catch((error) => {
+            console.log("用戶未登入:", error);
+            // 用戶未登入，清除本地存儲
+            localStorage.removeItem("user");
+          });
+      });
+    </script>
+  </body>
+</html>

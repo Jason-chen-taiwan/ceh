@@ -1,0 +1,85 @@
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1100px) {
+  .pricing-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .pricing-card.highlighted {
+    transform: scale(1);
+  }
+
+  .pricing-card.highlighted:hover {
+    transform: translateY(-10px);
+  }
+
+  .footer-content {
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .footer-brand {
+    max-width: 100%;
+  }
+
+  .footer-links {
+    flex-wrap: wrap;
+  }
+
+  .footer-links-column {
+    flex: 0 0 calc(50% - 25px);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 150px 0 80px;
+  }
+
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+
+  .hero-stats {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-links {
+    gap: 30px;
+  }
+
+  .footer-links-column {
+    flex: 0 0 100%;
+  }
+
+  .header-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  nav ul {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  nav ul li {
+    margin: 0 10px 10px;
+  }
+}

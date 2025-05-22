@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: my123pass # 修改為你想要的密碼
+      MYSQL_DATABASE: test_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
