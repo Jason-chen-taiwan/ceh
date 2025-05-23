@@ -1219,70 +1219,13 @@
               window.location.href = "/"; // 跳轉到首頁，可以改為升級頁面的URL
             });
           }
-        }
-
-        // 根據用戶級別處理高級功能顯示
+        } // 根據用戶級別處理高級功能顯示
         function checkUserTier(data) {
-          console.log("User data:", data); // 調試用
-          // 檢查用戶是否是管理員
+          console.log("User data:", data);
           const isAdmin = data.is_admin === true || data.is_admin === 1;
-          console.log("Is admin:", isAdmin); // 調試用
+          console.log("Is admin:", isAdmin);
+          console.log("Tier info:", data.tier); // 添加調試日誌
 
-          // 如果是管理員，直接設置專業版權限
-          if (isAdmin) {
-            const adminTierData = {
-              name: "專業版",
-              id: 3,
-              daily_quiz_limit: 999,
-              question_bank_size: 999,
-              remaining_daily_questions: 999,
-              has_advanced_analytics: true,
-              has_wrong_questions_review: true,
-              has_mock_exam: true,
-            };
-
-            console.log("Setting admin tier data:", adminTierData); // 調試用
-
-            // 更新用戶級別信息
-            updateTierInfo(adminTierData);
-
-            // 設置所有高級功能為可用
-            window.userTierInfo = {
-              isAdmin: true,
-              isFreeUser: false,
-              hasWrongQuestionsReview: true,
-              hasAdvancedAnalytics: true,
-              hasMockExam: true,
-              questionBankSize: 999,
-            };
-
-            // 立即顯示所有高級功能
-            const premiumSections =
-              document.querySelectorAll(".premium-section");
-            premiumSections.forEach((section) => {
-              section.style.display = "block";
-              section.classList.remove("premium-section");
-            });
-
-            // 隱藏所有升級提示
-            const upgradeOverlays =
-              document.querySelectorAll(".upgrade-overlay");
-            upgradeOverlays.forEach(
-              (overlay) => (overlay.style.display = "none")
-            );
-
-            // 立即隱藏升級按鈕
-            const upgradeBtn = document.getElementById("upgrade-btn");
-            if (upgradeBtn) upgradeBtn.style.display = "none";
-
-            return; // 提前結束函數
-          }
-
-          const isFreeUser =
-            !isAdmin &&
-            (!data.tier || data.tier?.name === "免費版" || data.tier?.id === 1);
-
-          // 獲取所有相關區塊
           const wrongQuestionsSection = document.getElementById(
             "wrong-questions-section"
           );
@@ -1294,24 +1237,11 @@
           const wrongQuestionsUpgrade = document.getElementById(
             "wrong-questions-upgrade"
           );
+          const upgradeBtn = document.getElementById("upgrade-btn");
 
           if (isAdmin) {
-            // 管理員顯示所有功能，隱藏所有升級提示
-            if (wrongQuestionsSection) {
-              wrongQuestionsSection.style.display = "block";
-              wrongQuestionsSection.classList.remove("premium-section");
-            }
-            if (analyticsSection) {
-              analyticsSection.style.display = "block";
-              analyticsSection.classList.remove("premium-section");
-            }
-            if (premiumFeaturesCard) premiumFeaturesCard.style.display = "none";
-            if (analyticsUpgrade) analyticsUpgrade.style.display = "none";
-            if (wrongQuestionsUpgrade)
-              wrongQuestionsUpgrade.style.display = "none";
-
-            // 為管理員設置專業版標記
-            updateTierInfo({
+            // 為管理員設置專業版資料
+            const adminData = {
               name: "專業版",
               id: 3,
               daily_quiz_limit: 999,
@@ -1320,93 +1250,160 @@
               has_advanced_analytics: true,
               has_wrong_questions_review: true,
               has_mock_exam: true,
-            });
+            };
+            console.log("Setting admin data:", adminData); // 更新用戶級別信息
+            updateTierInfo(adminData);
 
-            // 隱藏升級按鈕
-            const upgradeBtn = document.getElementById("upgrade-btn");
-            if (upgradeBtn) upgradeBtn.style.display = "none";
-          } else if (isFreeUser) {
-            // 免費用戶隱藏高級功能，顯示升級卡片
+            // 設置管理員權限
+            window.userTierInfo = {
+              isAdmin: true,
+              isFreeUser: false,
+              hasWrongQuestionsReview: true,
+              hasAdvancedAnalytics: true,
+              hasMockExam: true,
+              questionBankSize: 999,
+            };
+
+            // 移除所有高級功能的限制
             if (wrongQuestionsSection) {
               wrongQuestionsSection.style.display = "block";
-              const container = wrongQuestionsSection.querySelector(
-                "#wrong-questions-container"
-              );
-              if (container) {
-                container.classList.add("premium-blur");
+              const wrongQuestionsContainer =
+                wrongQuestionsSection.querySelector(
+                  "#wrong-questions-container"
+                );
+              if (wrongQuestionsContainer) {
+                wrongQuestionsContainer.classList.remove("premium-blur");
               }
-              const overlay = wrongQuestionsSection.querySelector(
-                "#wrong-questions-upgrade"
-              );
-              if (overlay) {
-                overlay.style.display = "flex";
+              if (wrongQuestionsUpgrade) {
+                wrongQuestionsUpgrade.style.display = "none";
               }
             }
+
             if (analyticsSection) {
               analyticsSection.style.display = "block";
-              const container = analyticsSection.querySelector(
+              const analyticsContainer = analyticsSection.querySelector(
                 "#analytics-container"
               );
-              if (container) {
-                container.classList.add("premium-blur");
-              }
-              if (analyticsUpgrade) {
-                analyticsUpgrade.style.display = "flex";
-              }
-            }
-            if (premiumFeaturesCard) {
-              premiumFeaturesCard.style.display = "block";
-            }
-          } else {
-            // 付費用戶顯示已解鎖的功能
-            if (wrongQuestionsSection) {
-              wrongQuestionsSection.style.display = "block";
-              const container = wrongQuestionsSection.querySelector(
-                "#wrong-questions-container"
-              );
-              if (container) {
-                container.classList.remove("premium-blur");
-              }
-              const overlay = wrongQuestionsSection.querySelector(
-                "#wrong-questions-upgrade"
-              );
-              if (overlay) {
-                overlay.style.display = "none";
-              }
-            }
-            if (analyticsSection) {
-              analyticsSection.style.display = "block";
-              const container = analyticsSection.querySelector(
-                "#analytics-container"
-              );
-              if (container) {
-                container.classList.remove("premium-blur");
+              if (analyticsContainer) {
+                analyticsContainer.classList.remove("premium-blur");
               }
               if (analyticsUpgrade) {
                 analyticsUpgrade.style.display = "none";
               }
             }
+
+            // 隱藏升級相關元素
             if (premiumFeaturesCard) {
               premiumFeaturesCard.style.display = "none";
             }
-          }
+            if (upgradeBtn) {
+              upgradeBtn.style.display = "none";
+            }
 
-          // 儲存用戶級別資訊以供其他函數使用
-          window.userTierInfo = {
-            isAdmin: isAdmin,
-            isFreeUser: isFreeUser,
-            // 管理員擁有所有權限
-            hasWrongQuestionsReview: isAdmin
-              ? true
-              : data.tier?.has_wrong_questions_review,
-            hasAdvancedAnalytics: isAdmin
-              ? true
-              : data.tier?.has_advanced_analytics,
-            hasMockExam: isAdmin ? true : data.tier?.has_mock_exam,
-            questionBankSize: isAdmin
-              ? 999
-              : data.tier?.question_bank_size || 200,
-          };
+            // 加載高級功能數據
+            loadWrongQuestions();
+            loadDashboardData();
+          } else {
+            // 非管理員用戶處理
+            const isFreeUser =
+              !data.tier || data.tier.name === "免費版" || data.tier.id === 1;
+
+            // 設置用戶權限
+            window.userTierInfo = {
+              isAdmin: false,
+              isFreeUser: isFreeUser,
+              hasWrongQuestionsReview:
+                data.tier?.has_wrong_questions_review || false,
+              hasAdvancedAnalytics: data.tier?.has_advanced_analytics || false,
+              hasMockExam: data.tier?.has_mock_exam || false,
+              questionBankSize: data.tier?.question_bank_size || 200,
+            };
+
+            updateTierInfo(
+              data.tier || {
+                name: "免費版",
+                id: 1,
+                daily_quiz_limit: 10,
+                question_bank_size: 200,
+                remaining_daily_questions: 10,
+                has_advanced_analytics: false,
+                has_wrong_questions_review: false,
+                has_mock_exam: false,
+              }
+            );
+
+            if (isFreeUser) {
+              // 免費用戶顯示所有升級提示
+              if (wrongQuestionsSection) {
+                wrongQuestionsSection.style.display = "block";
+                const container = wrongQuestionsSection.querySelector(
+                  "#wrong-questions-container"
+                );
+                if (container) {
+                  container.classList.add("premium-blur");
+                }
+                if (wrongQuestionsUpgrade) {
+                  wrongQuestionsUpgrade.style.display = "flex";
+                }
+              }
+
+              if (analyticsSection) {
+                analyticsSection.style.display = "block";
+                const container = analyticsSection.querySelector(
+                  "#analytics-container"
+                );
+                if (container) {
+                  container.classList.add("premium-blur");
+                }
+                if (analyticsUpgrade) {
+                  analyticsUpgrade.style.display = "flex";
+                }
+              }
+
+              if (premiumFeaturesCard) {
+                premiumFeaturesCard.style.display = "block";
+              }
+            } else {
+              // 付費用戶處理
+              if (wrongQuestionsSection) {
+                wrongQuestionsSection.style.display = "block";
+                const container = wrongQuestionsSection.querySelector(
+                  "#wrong-questions-container"
+                );
+                if (container) {
+                  container.classList.remove("premium-blur");
+                }
+                if (wrongQuestionsUpgrade) {
+                  wrongQuestionsUpgrade.style.display = "none";
+                }
+              }
+
+              if (analyticsSection) {
+                analyticsSection.style.display = "block";
+                const container = analyticsSection.querySelector(
+                  "#analytics-container"
+                );
+                if (container) {
+                  container.classList.remove("premium-blur");
+                }
+                if (analyticsUpgrade) {
+                  analyticsUpgrade.style.display = "none";
+                }
+              }
+
+              if (premiumFeaturesCard) {
+                premiumFeaturesCard.style.display = "none";
+              }
+            }
+
+            // 無論是否是免費用戶，都會載入基本的儀表板數據
+            loadDashboardData();
+
+            // 如果不是免費用戶，才載入高級功能數據
+            if (!isFreeUser) {
+              loadWrongQuestions();
+            }
+          }
         }
 
         // 為高級功能添加吸引注意力的動畫
@@ -1442,45 +1439,35 @@
               return response.json();
             })
             .then((data) => {
+              // 設置默認值並處理可能為空的數據
+              const defaultData = {
+                overall: {
+                  total_answered: 0,
+                  correct_count: 0,
+                  accuracy: 0,
+                },
+                recent_activities: [],
+                category_progress: {},
+                weak_areas: [],
+              };
+
+              // 合併後端返回的數據與默認數據
+              const mergedData = {
+                ...defaultData,
+                ...data,
+                overall: {
+                  ...defaultData.overall,
+                  ...(data.overall || {}),
+                },
+              };
+
               // 更新進度統計
               document.getElementById("total-answered").textContent =
-                data.overall.total_answered;
+                mergedData.overall.total_answered;
               document.getElementById("correct-count").textContent =
-                data.overall.correct_count;
-              const accuracy = data.overall.accuracy.toFixed(1);
+                mergedData.overall.correct_count;
+              const accuracy = mergedData.overall.accuracy.toFixed(1);
               document.getElementById("accuracy").textContent = accuracy + "%";
-
-              // 更新用戶級別顯示
-              if (data.user_tier) {
-                const tierBadge = document.getElementById("tier-badge");
-                if (data.user_tier.is_admin) {
-                  tierBadge.className = "tier-badge pro-tier";
-                  tierBadge.innerHTML = '<i class="fas fa-crown"></i> 專業版';
-
-                  // 更新管理員的其他顯示
-                  document.getElementById("daily-limit").textContent = "無限";
-                  document.getElementById("question-bank-size").textContent =
-                    "無限";
-                  document.getElementById("remaining-questions").textContent =
-                    "無限";
-                } else {
-                  // 非管理員用戶的顯示邏輯
-                  const tierClass =
-                    data.user_tier.name === "專業版"
-                      ? "pro-tier"
-                      : data.user_tier.name === "標準版"
-                      ? "standard-tier"
-                      : "free-tier";
-                  const iconClass =
-                    data.user_tier.name === "專業版"
-                      ? "fa-crown"
-                      : data.user_tier.name === "標準版"
-                      ? "fa-award"
-                      : "fa-user";
-                  tierBadge.className = `tier-badge ${tierClass}`;
-                  tierBadge.innerHTML = `<i class="fas ${iconClass}"></i> ${data.user_tier.name}`;
-                }
-              }
 
               // 更新進度條
               const accuracyBar = document.getElementById("accuracy-bar");
@@ -1488,18 +1475,34 @@
               accuracyBar.textContent = accuracy + "%";
 
               // 更新最近答題記錄
-              updateRecentActivities(data.recent_activities);
+              updateRecentActivities(mergedData.recent_activities);
 
               // 處理高級分析數據
-              handleAnalyticsData(data);
+              handleAnalyticsData(mergedData);
             })
             .catch((error) => {
               console.error("Progress data error:", error);
-              // 顯示錯誤消息給用戶
+              // 發生錯誤時設置所有數據為默認值
+              document.getElementById("total-answered").textContent = "0";
+              document.getElementById("correct-count").textContent = "0";
+              document.getElementById("accuracy").textContent = "0%";
+              document.getElementById("accuracy-bar").style.width = "0%";
+              document.getElementById("accuracy-bar").textContent = "0%";
+
+              // 顯示空狀態
+              updateRecentActivities([]);
+
+              // 可選：顯示錯誤消息
               const errorDiv = document.createElement("div");
               errorDiv.className = "error-message";
-              errorDiv.textContent = "載入進度資料時發生錯誤，請稍後再試";
-              document.querySelector(".container").prepend(errorDiv);
+              errorDiv.textContent = "無法載入進度資料，顯示默認數據";
+              const container = document.querySelector(".container");
+              // 檢查是否已經有錯誤消息
+              const existingError = container.querySelector(".error-message");
+              if (existingError) {
+                container.removeChild(existingError);
+              }
+              container.prepend(errorDiv);
             });
 
           // 處理錯題集數據
@@ -1508,6 +1511,7 @@
           }
         }
 
+        // 更新最近活動的函數
         function updateRecentActivities(activities) {
           const recentActivitiesBody = document.getElementById(
             "recent-activities-body"
@@ -1552,6 +1556,7 @@
               recentActivitiesBody.appendChild(row);
             });
           } else {
+            recentActivitiesBody.innerHTML = "";
             recentActivitiesEmpty.style.display = "block";
           }
         }
@@ -1579,6 +1584,39 @@
         }
 
         function loadWrongQuestions() {
+          const wrongQuestionsSection = document.getElementById(
+            "wrong-questions-section"
+          );
+          const wrongQuestionsUpgrade = document.getElementById(
+            "wrong-questions-upgrade"
+          );
+          const wrongQuestionsContainer = document.getElementById(
+            "wrong-questions-container"
+          );
+
+          // 確保只有擁有權限的用戶才能訪問錯題本
+          if (
+            !window.userTierInfo.hasWrongQuestionsReview &&
+            !window.userTierInfo.isAdmin
+          ) {
+            if (wrongQuestionsSection)
+              wrongQuestionsSection.style.display = "block";
+            if (wrongQuestionsUpgrade)
+              wrongQuestionsUpgrade.style.display = "block";
+            if (wrongQuestionsContainer)
+              wrongQuestionsContainer.classList.add("premium-blur");
+            return;
+          }
+
+          // 已有權限的用戶，隱藏升級提示，顯示內容
+          if (wrongQuestionsSection)
+            wrongQuestionsSection.style.display = "block";
+          if (wrongQuestionsUpgrade)
+            wrongQuestionsUpgrade.style.display = "none";
+          if (wrongQuestionsContainer)
+            wrongQuestionsContainer.classList.remove("premium-blur");
+
+          // 獲取錯題數據
           fetch("/api/user/wrong-questions", {
             credentials: "include",
           })
@@ -1589,76 +1627,81 @@
               return response.json();
             })
             .then((data) => {
-              const tbody = document.getElementById("wrong-questions-body");
-              const emptyState = document.getElementById(
-                "wrong-questions-empty"
-              );
-
-              if (data && data.length > 0) {
-                tbody.innerHTML = "";
-                emptyState.style.display = "none";
-
-                data.forEach((item) => {
-                  const row = document.createElement("tr");
-
-                  // 题号
-                  const questionNumberCell = document.createElement("td");
-                  questionNumberCell.textContent = item.question_number;
-
-                  // 题目
-                  const questionTextCell = document.createElement("td");
-                  questionTextCell.textContent =
-                    item.question_text.length > 50
-                      ? item.question_text.substring(0, 50) + "..."
-                      : item.question_text;
-
-                  // 错误答案
-                  const wrongAnswerCell = document.createElement("td");
-                  wrongAnswerCell.textContent = item.wrong_answer;
-
-                  // 正确答案
-                  const correctAnswerCell = document.createElement("td");
-                  correctAnswerCell.textContent = item.correct_answer;
-
-                  // 答题时间
-                  const timeCell = document.createElement("td");
-                  const date = new Date(item.answered_at);
-                  timeCell.textContent = date.toLocaleString();
-
-                  // 操作按钮
-                  const actionCell = document.createElement("td");
-                  const reviewButton = document.createElement("button");
-                  reviewButton.className = "review-btn";
-                  reviewButton.textContent = "復習";
-                  reviewButton.onclick = () => {
-                    window.location.href = `/quiz?question=${item.question_number}`;
-                  };
-                  actionCell.appendChild(reviewButton);
-
-                  // 添加所有單元格到行
-                  row.appendChild(questionNumberCell);
-                  row.appendChild(questionTextCell);
-                  row.appendChild(wrongAnswerCell);
-                  row.appendChild(correctAnswerCell);
-                  row.appendChild(timeCell);
-                  row.appendChild(actionCell);
-
-                  tbody.appendChild(row);
-                });
-              } else {
-                tbody.innerHTML = "";
-                emptyState.style.display = "block";
-              }
+              handleWrongQuestionsData(data);
             })
             .catch((error) => {
               console.error("Error loading wrong questions:", error);
-              const errorDiv = document.createElement("div");
-              errorDiv.className = "error-message";
-              errorDiv.textContent = "載入錯題集時發生錯誤，請稍後再試";
-              document
-                .getElementById("wrong-questions-container")
-                .prepend(errorDiv);
+              showError("載入錯題集時發生錯誤");
             });
+        }
+
+        function handleWrongQuestionsData(data) {
+          const wrongQuestionsBody = document.getElementById(
+            "wrong-questions-body"
+          );
+          const wrongQuestionsEmpty = document.getElementById(
+            "wrong-questions-empty"
+          );
+
+          if (data && data.length > 0) {
+            if (wrongQuestionsEmpty) {
+              wrongQuestionsEmpty.style.display = "none";
+            }
+
+            wrongQuestionsBody.innerHTML = "";
+            data.forEach((question) => {
+              const row = document.createElement("tr");
+
+              // 題號
+              const questionNumberCell = document.createElement("td");
+              questionNumberCell.textContent = question.question_number;
+              row.appendChild(questionNumberCell);
+
+              // 題目
+              const questionTextCell = document.createElement("td");
+              questionTextCell.textContent =
+                question.question_text.length > 50
+                  ? question.question_text.substring(0, 50) + "..."
+                  : question.question_text;
+              row.appendChild(questionTextCell);
+
+              // 你的答案
+              const wrongAnswerCell = document.createElement("td");
+              wrongAnswerCell.textContent = question.wrong_answer;
+              row.appendChild(wrongAnswerCell);
+
+              // 正確答案
+              const correctAnswerCell = document.createElement("td");
+              correctAnswerCell.textContent = question.correct_answer;
+              row.appendChild(correctAnswerCell);
+
+              // 答題時間
+              const timeCell = document.createElement("td");
+              const answerDate = new Date(question.answered_at);
+              timeCell.textContent = answerDate.toLocaleString();
+              row.appendChild(timeCell);
+
+              // 操作按鈕
+              const actionCell = document.createElement("td");
+              const reviewButton = document.createElement("button");
+              reviewButton.classList.add("review-btn");
+              reviewButton.textContent = "複習";
+              reviewButton.onclick = () => {
+                window.location.href = `/quiz?question=${question.question_number}`;
+              };
+              actionCell.appendChild(reviewButton);
+              row.appendChild(actionCell);
+
+              wrongQuestionsBody.appendChild(row);
+            });
+          } else {
+            if (wrongQuestionsEmpty) {
+              wrongQuestionsEmpty.style.display = "block";
+            }
+            if (wrongQuestionsBody) {
+              wrongQuestionsBody.innerHTML = "";
+            }
+          }
         }
       });
     </script>

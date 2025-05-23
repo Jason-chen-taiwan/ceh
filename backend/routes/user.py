@@ -96,20 +96,20 @@ def login():
         
         # 檢查用戶每日題目限制是否需要重置
         check_and_reset_daily_limit(user['id'], user['daily_quiz_limit'])
-            
-        # 登入成功，設置會話
+              # 登入成功，設置會話
+        is_admin = user['is_admin']
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['email'] = user['email']
-        session['user_tier_id'] = user['user_tier_id']
-        session['tier_name'] = user['tier_name']
-        session['remaining_daily_questions'] = user['remaining_daily_questions']
-        session['daily_quiz_limit'] = user['daily_quiz_limit']
-        session['has_advanced_analytics'] = user['has_advanced_analytics']
-        session['has_wrong_questions_review'] = user['has_wrong_questions_review']
-        session['has_mock_exam'] = user['has_mock_exam']
-        session['question_bank_size'] = user['question_bank_size']
-        session['is_admin'] = user['is_admin']
+        session['user_tier_id'] = 3 if is_admin else user['user_tier_id']
+        session['tier_name'] = '專業版' if is_admin else user['tier_name']
+        session['remaining_daily_questions'] = 999 if is_admin else user['remaining_daily_questions']
+        session['daily_quiz_limit'] = 999 if is_admin else user['daily_quiz_limit']
+        session['has_advanced_analytics'] = True if is_admin else user['has_advanced_analytics']
+        session['has_wrong_questions_review'] = True if is_admin else user['has_wrong_questions_review']
+        session['has_mock_exam'] = True if is_admin else user['has_mock_exam']
+        session['question_bank_size'] = 999 if is_admin else user['question_bank_size']
+        session['is_admin'] = is_admin
         session.modified = True  # 確保會話被保存print(f"Login successful for: {user['email']}")
         
         # 檢查是否有next參數用於重定向
@@ -217,6 +217,17 @@ def check_session():
             conn = get_db_connection()
             if not conn:
                 return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
+                
+            # Reset the user's session with admin privileges if they are an admin
+            if session.get('is_admin', False):
+                session['tier_name'] = '專業版'
+                session['has_advanced_analytics'] = True
+                session['has_wrong_questions_review'] = True
+                session['has_mock_exam'] = True
+                session['daily_quiz_limit'] = 999
+                session['question_bank_size'] = 999
+                session.modified = True
+                print("Admin privileges set in session")
             
             cursor = conn.cursor(dictionary=True)
             cursor.execute('''
@@ -229,7 +240,6 @@ def check_session():
             ''', (session['user_id'],))
             
             user = cursor.fetchone()
-            
             if user:
                 # 更新會話中的用戶信息
                 session['user_id'] = user['id']
@@ -237,8 +247,15 @@ def check_session():
                 session['email'] = user['email']
                 session['user_tier_id'] = user['user_tier_id']
                 session['is_admin'] = user['is_admin']
-                session['tier_name'] = user['tier_name']
+                session['tier_name'] = 'Professional' if user['is_admin'] else user['tier_name']
+                session['has_advanced_analytics'] = True if user['is_admin'] else user['has_advanced_analytics']
+                session['has_wrong_questions_review'] = True if user['is_admin'] else user['has_wrong_questions_review']
+                session['has_mock_exam'] = True if user['is_admin'] else user['has_mock_exam']
+                session['daily_quiz_limit'] = 999 if user['is_admin'] else user['daily_quiz_limit']
+                session['question_bank_size'] = 999 if user['is_admin'] else user['question_bank_size']
                 session.modified = True
+                
+                print(f"Session updated for user {user['username']}, is_admin: {user['is_admin']}")  # 調試日誌
                 
                 return add_cors_headers(jsonify({
                     'status': 'authenticated',
@@ -283,10 +300,12 @@ def check_session():
 def get_user_wrong_questions():
     user_id = session['user_id']
     is_admin = session.get('is_admin', False)
-    has_wrong_questions_review = session.get('has_wrong_questions_review', False)
+    has_wrong_questions_review = True if is_admin else session.get('has_wrong_questions_review', False)
+    
+    print(f"Wrong questions API - User ID: {user_id}, Is Admin: {is_admin}, Has Review: {has_wrong_questions_review}")  # 調試日誌
     
     # 檢查用戶是否有權限訪問錯題本
-    if not (has_wrong_questions_review or is_admin):
+    if not has_wrong_questions_review:
         return add_cors_headers(jsonify({
             'error': 'Feature not available',
             'message': '錯題集與重點複習功能僅限標準版或專業版用戶使用，請升級您的帳戶以獲取此功能！'
@@ -348,7 +367,9 @@ def get_user_wrong_questions():
 def get_user_progress():
     user_id = session['user_id']
     is_admin = session.get('is_admin', False)
-    has_advanced_analytics = session.get('has_advanced_analytics', False)
+    has_advanced_analytics = True if is_admin else session.get('has_advanced_analytics', False)
+    
+    print(f"Progress API - User ID: {user_id}, Is Admin: {is_admin}")  # 調試日誌
     
     conn = get_db_connection()
     if not conn:
@@ -383,7 +404,6 @@ def get_user_progress():
         # 基本進度數據對所有用戶都可用        # 初始化基礎回應數據
         total_answered = int(overall['total_answered']) if overall else 0
         correct_count = int(overall['correct_count']) if overall else 0
-        
         response = {
             'overall': {
                 'total_answered': total_answered,
@@ -392,8 +412,21 @@ def get_user_progress():
             },
             'recent_activities': recent_activities or [],
             'user_tier': {
-                'name': '專業版' if is_admin else session.get('tier_name', '免費版'),
-                'is_admin': is_admin
+                'name': '專業版',
+                'is_admin': is_admin,
+                'has_advanced_analytics': True,
+                'has_wrong_questions_review': True,
+                'has_mock_exam': True,
+                'daily_quiz_limit': 999,
+                'question_bank_size': 999
+            } if is_admin else {
+                'name': session.get('tier_name', '免費版'),
+                'is_admin': is_admin,
+                'has_advanced_analytics': session.get('has_advanced_analytics', False),
+                'has_wrong_questions_review': session.get('has_wrong_questions_review', False),
+                'has_mock_exam': session.get('has_mock_exam', False),
+                'daily_quiz_limit': session.get('daily_quiz_limit', 10),
+                'question_bank_size': session.get('question_bank_size', 200)
             }
         }
         
