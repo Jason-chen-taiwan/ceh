@@ -217,10 +217,13 @@
         position: relative;
         overflow: hidden;
         border-radius: 8px;
+        min-height: 400px; /* 增加最小高度確保內容完整顯示 */
       }
 
       .premium-blur {
         position: relative;
+        height: 100%;
+        width: 100%;
       }
 
       .premium-blur::before {
@@ -228,22 +231,53 @@
         position: absolute;
         top: 0;
         left: 0;
+        right: 0;
+        bottom: 0;
         width: 100%;
         height: 100%;
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         background-color: rgba(255, 255, 255, 0.2);
         z-index: 5;
-        pointer-events: none;
-        animation: blurPulse 3s infinite alternate;
-        border: 2px dashed rgba(255, 165, 0, 0.3);
-        box-sizing: border-box;
       }
 
-      /* 針對不支持backdrop-filter的瀏覽器提供替代方案 */
-      .no-backdrop-filter .premium-blur::before {
-        background-color: rgba(255, 255, 255, 0.8);
-        filter: blur(0); /* 因為無法模糊背景，所以使用更強的半透明背景 */
+      .upgrade-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 1000;
+        display: flex !important; /* 強制顯示 */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+        border-radius: 8px;
+      }
+
+      /* 修改圖標容器樣式使其在兩個區域表現一致 */
+      .upgrade-overlay .icon-container {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 152, 0, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+
+      .upgrade-overlay .icon-container i {
+        font-size: 40px;
+        color: #ff9800;
       }
 
       @keyframes blurPulse {
@@ -282,16 +316,17 @@
         }
       }
       .upgrade-overlay {
-        display: none;
         position: absolute;
         top: 0;
         left: 0;
+        right: 0; /* 確保完整覆蓋 */
+        bottom: 0; /* 確保完整覆蓋 */
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.85); /* 稍微調深背景色 */
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
-        z-index: 10;
+        z-index: 1000; /* 提高層級確保顯示在最上層 */
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -300,8 +335,7 @@
         padding: 20px;
         box-sizing: border-box;
         border-radius: 8px;
-        animation: overlayFadeIn 0.5s ease-out;
-        transition: all 0.3s ease;
+        opacity: 1; /* 確保完全不透明 */
       }
 
       .upgrade-overlay:hover {
@@ -320,10 +354,17 @@
       }
 
       .upgrade-overlay .icon-container {
-        margin-bottom: 15px;
-        font-size: 36px;
+        margin-bottom: 20px;
+        font-size: 40px;
         color: #ff9800;
-        animation: pulse 2s infinite;
+        background: rgba(255, 152, 0, 0.1);
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 20px rgba(255, 152, 0, 0.2);
       }
 
       @keyframes pulse {
@@ -343,7 +384,7 @@
       .upgrade-overlay h3 {
         color: #ffffff;
         margin-bottom: 15px;
-        font-size: 28px;
+        font-size: 24px;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
       .upgrade-overlay p {
@@ -1286,23 +1327,68 @@
             if (upgradeBtn) upgradeBtn.style.display = "none";
           } else if (isFreeUser) {
             // 免費用戶隱藏高級功能，顯示升級卡片
-            if (wrongQuestionsSection)
-              wrongQuestionsSection.style.display = "none";
-            if (analyticsSection) analyticsSection.style.display = "none";
-            if (premiumFeaturesCard)
+            if (wrongQuestionsSection) {
+              wrongQuestionsSection.style.display = "block";
+              const container = wrongQuestionsSection.querySelector(
+                "#wrong-questions-container"
+              );
+              if (container) {
+                container.classList.add("premium-blur");
+              }
+              const overlay = wrongQuestionsSection.querySelector(
+                "#wrong-questions-upgrade"
+              );
+              if (overlay) {
+                overlay.style.display = "flex";
+              }
+            }
+            if (analyticsSection) {
+              analyticsSection.style.display = "block";
+              const container = analyticsSection.querySelector(
+                "#analytics-container"
+              );
+              if (container) {
+                container.classList.add("premium-blur");
+              }
+              if (analyticsUpgrade) {
+                analyticsUpgrade.style.display = "flex";
+              }
+            }
+            if (premiumFeaturesCard) {
               premiumFeaturesCard.style.display = "block";
-            if (analyticsUpgrade) analyticsUpgrade.style.display = "block";
-            if (wrongQuestionsUpgrade)
-              wrongQuestionsUpgrade.style.display = "block";
+            }
           } else {
             // 付費用戶顯示已解鎖的功能
-            if (wrongQuestionsSection)
+            if (wrongQuestionsSection) {
               wrongQuestionsSection.style.display = "block";
-            if (analyticsSection) analyticsSection.style.display = "block";
-            if (premiumFeaturesCard) premiumFeaturesCard.style.display = "none";
-            if (analyticsUpgrade) analyticsUpgrade.style.display = "none";
-            if (wrongQuestionsUpgrade)
-              wrongQuestionsUpgrade.style.display = "none";
+              const container = wrongQuestionsSection.querySelector(
+                "#wrong-questions-container"
+              );
+              if (container) {
+                container.classList.remove("premium-blur");
+              }
+              const overlay = wrongQuestionsSection.querySelector(
+                "#wrong-questions-upgrade"
+              );
+              if (overlay) {
+                overlay.style.display = "none";
+              }
+            }
+            if (analyticsSection) {
+              analyticsSection.style.display = "block";
+              const container = analyticsSection.querySelector(
+                "#analytics-container"
+              );
+              if (container) {
+                container.classList.remove("premium-blur");
+              }
+              if (analyticsUpgrade) {
+                analyticsUpgrade.style.display = "none";
+              }
+            }
+            if (premiumFeaturesCard) {
+              premiumFeaturesCard.style.display = "none";
+            }
           }
 
           // 儲存用戶級別資訊以供其他函數使用
@@ -1492,7 +1578,88 @@
           }
         }
 
-        // ... rest of the code ...
+        function loadWrongQuestions() {
+          fetch("/api/user/wrong-questions", {
+            credentials: "include",
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Failed to load wrong questions");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              const tbody = document.getElementById("wrong-questions-body");
+              const emptyState = document.getElementById(
+                "wrong-questions-empty"
+              );
+
+              if (data && data.length > 0) {
+                tbody.innerHTML = "";
+                emptyState.style.display = "none";
+
+                data.forEach((item) => {
+                  const row = document.createElement("tr");
+
+                  // 题号
+                  const questionNumberCell = document.createElement("td");
+                  questionNumberCell.textContent = item.question_number;
+
+                  // 题目
+                  const questionTextCell = document.createElement("td");
+                  questionTextCell.textContent =
+                    item.question_text.length > 50
+                      ? item.question_text.substring(0, 50) + "..."
+                      : item.question_text;
+
+                  // 错误答案
+                  const wrongAnswerCell = document.createElement("td");
+                  wrongAnswerCell.textContent = item.wrong_answer;
+
+                  // 正确答案
+                  const correctAnswerCell = document.createElement("td");
+                  correctAnswerCell.textContent = item.correct_answer;
+
+                  // 答题时间
+                  const timeCell = document.createElement("td");
+                  const date = new Date(item.answered_at);
+                  timeCell.textContent = date.toLocaleString();
+
+                  // 操作按钮
+                  const actionCell = document.createElement("td");
+                  const reviewButton = document.createElement("button");
+                  reviewButton.className = "review-btn";
+                  reviewButton.textContent = "復習";
+                  reviewButton.onclick = () => {
+                    window.location.href = `/quiz?question=${item.question_number}`;
+                  };
+                  actionCell.appendChild(reviewButton);
+
+                  // 添加所有單元格到行
+                  row.appendChild(questionNumberCell);
+                  row.appendChild(questionTextCell);
+                  row.appendChild(wrongAnswerCell);
+                  row.appendChild(correctAnswerCell);
+                  row.appendChild(timeCell);
+                  row.appendChild(actionCell);
+
+                  tbody.appendChild(row);
+                });
+              } else {
+                tbody.innerHTML = "";
+                emptyState.style.display = "block";
+              }
+            })
+            .catch((error) => {
+              console.error("Error loading wrong questions:", error);
+              const errorDiv = document.createElement("div");
+              errorDiv.className = "error-message";
+              errorDiv.textContent = "載入錯題集時發生錯誤，請稍後再試";
+              document
+                .getElementById("wrong-questions-container")
+                .prepend(errorDiv);
+            });
+        }
       });
     </script>
   </body>
