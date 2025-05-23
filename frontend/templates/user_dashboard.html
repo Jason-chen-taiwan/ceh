@@ -8,6 +8,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -55,31 +59,43 @@
       }
       .dashboard-section {
         background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        margin-bottom: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        padding: 30px;
+        margin-bottom: 40px;
+        transition: all 0.3s ease;
+      }
+      .dashboard-section:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
       }
       .section-title {
         margin-top: 0;
         color: #333;
+        font-size: 1.6rem;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f0f0f0;
         border-bottom: 2px solid #4caf50;
         padding-bottom: 10px;
         margin-bottom: 20px;
       }
       .stats-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        margin-bottom: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
       }
       .stat-card {
-        flex: 1;
-        min-width: 200px;
         background-color: #f9f9f9;
-        border-radius: 8px;
-        padding: 15px;
+        border-radius: 12px;
+        padding: 20px;
         text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+      }
+      .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
       .stat-value {
         font-size: 32px;
@@ -91,15 +107,17 @@
         color: #666;
       }
       .progress-bar-container {
-        background-color: #ddd;
-        border-radius: 4px;
-        height: 20px;
-        margin-bottom: 20px;
+        background-color: #eef2f7;
+        border-radius: 10px;
+        height: 16px;
+        margin: 25px 0;
+        overflow: hidden;
       }
       .progress-bar {
-        background-color: #4caf50;
+        background: linear-gradient(90deg, #4caf50, #45a049);
         height: 100%;
-        border-radius: 4px;
+        border-radius: 10px;
+        transition: width 0.8s ease;
         text-align: right;
         color: white;
         padding-right: 10px;
@@ -194,6 +212,561 @@
       }
       .quiz-btn:hover {
         background-color: #45a049;
+      } /* 模糊效果和升級提示樣式 */
+      .premium-feature {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+      }
+
+      .premium-blur {
+        position: relative;
+      }
+
+      .premium-blur::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        background-color: rgba(255, 255, 255, 0.2);
+        z-index: 5;
+        pointer-events: none;
+        animation: blurPulse 3s infinite alternate;
+        border: 2px dashed rgba(255, 165, 0, 0.3);
+        box-sizing: border-box;
+      }
+
+      /* 針對不支持backdrop-filter的瀏覽器提供替代方案 */
+      .no-backdrop-filter .premium-blur::before {
+        background-color: rgba(255, 255, 255, 0.8);
+        filter: blur(0); /* 因為無法模糊背景，所以使用更強的半透明背景 */
+      }
+
+      @keyframes blurPulse {
+        0% {
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+        }
+        100% {
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+        }
+      }
+
+      /* 為模糊元素添加閃光邊框效果 */
+      .premium-blur::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 4;
+        pointer-events: none;
+        border: 2px solid rgba(255, 165, 0, 0.6);
+        border-radius: 8px;
+        box-sizing: border-box;
+        animation: pulseBorder 2s infinite alternate;
+      }
+
+      @keyframes pulseBorder {
+        0% {
+          box-shadow: 0 0 5px rgba(255, 165, 0, 0.3);
+        }
+        100% {
+          box-shadow: 0 0 15px rgba(255, 165, 0, 0.7);
+        }
+      }
+      .upgrade-overlay {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+        border-radius: 8px;
+        animation: overlayFadeIn 0.5s ease-out;
+        transition: all 0.3s ease;
+      }
+
+      .upgrade-overlay:hover {
+        background: rgba(0, 0, 0, 0.75);
+      }
+
+      @keyframes overlayFadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .upgrade-overlay .icon-container {
+        margin-bottom: 15px;
+        font-size: 36px;
+        color: #ff9800;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .upgrade-overlay h3 {
+        color: #ffffff;
+        margin-bottom: 15px;
+        font-size: 28px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .upgrade-overlay p {
+        text-align: center;
+        margin: 0 auto 25px;
+        max-width: 500px;
+        line-height: 1.6;
+        color: #ffffff;
+        margin-bottom: 25px;
+        font-size: 16px;
+        max-width: 400px;
+        line-height: 1.6;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
+
+      .upgrade-btn {
+        background-color: #ff9800;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .upgrade-btn:hover {
+        background-color: #f57c00;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+      }
+
+      .upgrade-btn::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        border-radius: 100%;
+        transform: scale(1, 1) translate(-50%);
+        transform-origin: 50% 50%;
+      }
+
+      .upgrade-btn:hover::after {
+        animation: ripple 1s ease-out;
+      }
+
+      @keyframes ripple {
+        0% {
+          transform: scale(0, 0);
+          opacity: 0.5;
+        }
+        100% {
+          transform: scale(20, 20);
+          opacity: 0;
+        }
+      } /* 用戶級別資訊樣式 */
+      .user-tier-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      .tier-badge {
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        color: white;
+        margin-right: 20px;
+      }
+
+      .free-tier {
+        background-color: #78909c;
+      }
+
+      .standard-tier {
+        background-color: #4caf50;
+      }
+
+      .pro-tier {
+        background-color: #ff9800;
+      }
+
+      .tier-details {
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      .tier-feature {
+        background-color: white;
+        padding: 8px 15px;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .feature-label {
+        color: #666;
+        font-size: 14px;
+        margin-right: 5px;
+      }
+
+      .feature-value {
+        font-weight: bold;
+        color: #333;
+      }
+
+      .tier-actions {
+        margin-left: 20px;
+      } /* 注意力高亮效果 */
+      @keyframes highlightPulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
+        }
+        70% {
+          box-shadow: 0 0 0 15px rgba(255, 152, 0, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
+        }
+      }
+
+      .attention-highlight {
+        animation: highlightPulse 0.6s ease-out;
+      }
+
+      /* 按鈕脈動效果 */
+      @keyframes btnPulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .pulse-attention {
+        animation: btnPulse 1s infinite;
+      }
+
+      /* 為升級提示添加豐富的內容樣式 */
+      .upgrade-overlay .feature-list {
+        margin: 0 auto 25px;
+        max-width: 450px;
+      }
+      .upgrade-overlay .feature-list li {
+        margin-bottom: 8px;
+        position: relative;
+        padding-left: 25px;
+        color: #ffffff;
+      }
+
+      .upgrade-overlay .feature-list li::before {
+        content: "\f00c";
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        position: absolute;
+        left: 0;
+        color: #4caf50;
+      } /* 高級功能區塊樣式 */
+      .premium-section {
+        display: block; /* 改為顯示 */
+        position: relative;
+        margin-top: 30px;
+      }
+
+      /* 升級提示卡片樣式 */
+      .upgrade-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        text-align: center;
+        margin: 20px 0;
+        border: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+      }
+
+      .upgrade-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+      }
+
+      .upgrade-card .icon {
+        font-size: 48px;
+        color: #ff9800;
+        margin-bottom: 15px;
+      }
+
+      .upgrade-card h3 {
+        font-size: 22px;
+        color: #333;
+        margin-bottom: 15px;
+      }
+
+      .upgrade-card p {
+        color: #666;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+
+      .upgrade-card .feature-tags {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      .feature-tag {
+        background-color: #f5f5f5;
+        color: #666;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+      }
+
+      /* 價格選項樣式 */
+      .pricing-options {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 30px;
+        flex-wrap: wrap;
+      }
+
+      .pricing-option {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        padding: 25px;
+        width: 220px;
+        border: 1px solid #eee;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .pricing-option:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      .pricing-option h4 {
+        font-size: 20px;
+        margin-bottom: 15px;
+        color: #333;
+      }
+
+      .pricing-option .price {
+        font-size: 28px;
+        font-weight: bold;
+        color: #4caf50;
+        margin-bottom: 20px;
+      }
+
+      .pricing-option .price span {
+        font-size: 16px;
+        font-weight: normal;
+        color: #666;
+      }
+
+      .pricing-option ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 25px 0;
+        text-align: left;
+      }
+
+      .pricing-option ul li {
+        padding: 6px 0;
+        position: relative;
+        padding-left: 22px;
+        color: #555;
+      }
+
+      .pricing-option ul li::before {
+        content: "\f00c";
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        color: #4caf50;
+        position: absolute;
+        left: 0;
+      }
+
+      .pricing-option.recommended {
+        border: 2px solid #ff9800;
+        transform: scale(1.05);
+      }
+
+      .pricing-option.recommended:hover {
+        transform: translateY(-5px) scale(1.05);
+      }
+
+      .recommended-badge {
+        position: absolute;
+        top: -12px;
+        right: 20px;
+        background-color: #ff9800;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .standard-btn {
+        background-color: #4caf50;
+      }
+
+      .standard-btn:hover {
+        background-color: #388e3c;
+      }
+
+      .pro-btn {
+        background-color: #ff9800;
+      }
+      .pro-btn:hover {
+        background-color: #f57c00;
+      }
+
+      .error-message {
+        background-color: #ffebee;
+        color: #c62828;
+        padding: 10px 20px;
+        border-radius: 4px;
+        margin: 10px 0;
+        text-align: center;
+        border: 1px solid #ef9a9a;
+      }
+      #analytics-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 30px;
+        margin: 20px 0;
+        min-height: 500px; /* 確保有足夠的高度顯示內容 */
+      }
+      #category-progress-container,
+      #weak-areas-container {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+      }
+      #category-progress-container h3,
+      #weak-areas-container h3 {
+        color: #2c3e50;
+        font-size: 1.5rem;
+        margin-bottom: 25px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #eef2f7;
+        text-align: center;
+      }
+      .chart-container {
+        width: 100%;
+        flex-grow: 1;
+        min-height: 350px;
+        margin: 15px 0;
+        position: relative;
+      }
+      @media (max-width: 1200px) {
+        #analytics-container {
+          grid-template-columns: 1fr;
+          gap: 30px;
+        }
+        .chart-container {
+          min-height: 400px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .stats-container {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+        .dashboard-section {
+          padding: 20px;
+          margin-bottom: 30px;
+        }
+        #category-progress-container,
+        #weak-areas-container {
+          padding: 20px;
+        }
+        .chart-container {
+          min-height: 350px;
+        }
+        .section-title {
+          font-size: 1.4rem;
+          margin-bottom: 20px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .stat-card {
+          padding: 15px;
+        }
+        .chart-container {
+          min-height: 300px;
+        }
+        #category-progress-container h3,
+        #weak-areas-container h3 {
+          font-size: 1.3rem;
+          margin-bottom: 15px;
+        }
       }
     </style>
   </head>
@@ -205,6 +778,34 @@
           <a href="/">首頁</a>
           <a href="/quiz">測驗平台</a>
           <button id="logout-btn">登出</button>
+        </div>
+      </div>
+
+      <div class="dashboard-section">
+        <h2 class="section-title">會員資訊</h2>
+        <div class="user-tier-info">
+          <div id="tier-badge" class="tier-badge free-tier">
+            <i class="fas fa-user"></i> 免費版
+          </div>
+          <div class="tier-details">
+            <div class="tier-feature">
+              <span class="feature-label">每日題目限制：</span>
+              <span id="daily-limit" class="feature-value">10</span>
+            </div>
+            <div class="tier-feature">
+              <span class="feature-label">可訪問題庫大小：</span>
+              <span id="question-bank-size" class="feature-value">200</span>
+            </div>
+            <div class="tier-feature">
+              <span class="feature-label">今日剩餘題目：</span>
+              <span id="remaining-questions" class="feature-value">10</span>
+            </div>
+          </div>
+          <div class="tier-actions">
+            <button id="upgrade-btn" class="upgrade-btn">
+              <i class="fas fa-crown"></i> 升級會員
+            </button>
+          </div>
         </div>
       </div>
 
@@ -229,10 +830,12 @@
           <div class="progress-bar" id="accuracy-bar" style="width: 0%">0%</div>
         </div>
       </div>
-
-      <div class="dashboard-section">
+      <div
+        class="dashboard-section premium-section"
+        id="wrong-questions-section"
+      >
         <h2 class="section-title">錯題集</h2>
-        <div id="wrong-questions-container">
+        <div id="wrong-questions-container" class="premium-feature">
           <div class="table-container">
             <table id="wrong-questions-table">
               <thead>
@@ -260,6 +863,67 @@
           >
             <p>目前沒有錯題記錄</p>
             <a href="/quiz" class="quiz-btn">開始測驗</a>
+          </div>
+          <div
+            class="upgrade-overlay"
+            id="wrong-questions-upgrade"
+            style="display: none"
+          >
+            <div class="icon-container">
+              <i class="fas fa-lock"></i>
+            </div>
+            <h3>升級您的帳戶</h3>
+            <p>
+              錯題集功能僅限標準版或專業版用戶使用。升級您的帳戶以獲取此功能！
+            </p>
+            <ul class="feature-list">
+              <li>查看所有錯誤答題記錄</li>
+              <li>針對錯題進行有針對性的練習</li>
+              <li>分析錯題類型，提高通過率</li>
+            </ul>
+            <button class="upgrade-btn" onclick="location.href='/'">
+              <span>立即升級</span> <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="dashboard-section premium-section" id="analytics-section">
+        <h2 class="section-title">學習進度分析</h2>
+        <div id="analytics-container" class="premium-feature">
+          <div id="category-progress-container" style="margin-bottom: 30px">
+            <h3>類別進度</h3>
+            <div id="category-progress" class="stats-container">
+              <!-- 類別進度將通過JavaScript動態填充 -->
+            </div>
+          </div>
+
+          <div id="weak-areas-container">
+            <h3>弱項分析</h3>
+            <div id="weak-areas" class="stats-container">
+              <!-- 弱項分析將通過JavaScript動態填充 -->
+            </div>
+          </div>
+          <div
+            class="upgrade-overlay"
+            id="analytics-upgrade"
+            style="display: none"
+          >
+            <div class="icon-container">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>升級您的帳戶</h3>
+            <p>
+              進階分析功能僅限標準版或專業版用戶使用。升級您的帳戶以獲取深入的學習分析！
+            </p>
+            <ul class="feature-list">
+              <li>詳細的類別進度分析</li>
+              <li>個人弱項自動識別</li>
+              <li>智能學習路徑推薦</li>
+              <li>考試通過率預測</li>
+            </ul>
+            <button class="upgrade-btn" onclick="location.href='/'">
+              <span>立即升級</span> <i class="fas fa-arrow-right"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -292,13 +956,75 @@
           </div>
         </div>
       </div>
+      <div
+        class="dashboard-section"
+        id="premium-features-card"
+        style="display: none"
+      >
+        <div class="upgrade-card">
+          <div class="icon">
+            <i class="fas fa-crown"></i>
+          </div>
+          <h3>升級獲取更多高級功能</h3>
+          <p>
+            升級到標準版或專業版，即可解鎖更多學習工具，包括錯題集和學習進度分析，助您更快通過CEH考試！
+          </p>
+          <div class="feature-tags">
+            <span class="feature-tag"><i class="fas fa-check"></i> 錯題集</span>
+            <span class="feature-tag"
+              ><i class="fas fa-check"></i> 學習進度分析</span
+            >
+            <span class="feature-tag"
+              ><i class="fas fa-check"></i> 弱項識別</span
+            >
+            <span class="feature-tag"
+              ><i class="fas fa-check"></i> 題庫擴展</span
+            >
+          </div>
+          <div class="pricing-options">
+            <div class="pricing-option">
+              <h4>標準版</h4>
+              <div class="price">NT$299<span>/月</span></div>
+              <ul>
+                <li>解鎖錯題集功能</li>
+                <li>基礎學習分析</li>
+                <li>每日50題</li>
+              </ul>
+              <button
+                class="upgrade-btn standard-btn"
+                onclick="location.href='/pricing?plan=standard'"
+              >
+                <span>選擇標準版</span>
+              </button>
+            </div>
+            <div class="pricing-option recommended">
+              <div class="recommended-badge">推薦</div>
+              <h4>專業版</h4>
+              <div class="price">NT$499<span>/月</span></div>
+              <ul>
+                <li>全部功能解鎖</li>
+                <li>高級學習分析</li>
+                <li>無限題目</li>
+                <li>模擬考試模式</li>
+              </ul>
+              <button
+                class="upgrade-btn pro-btn"
+                onclick="location.href='/pricing?plan=pro'"
+              >
+                <span>選擇專業版</span> <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        // 先從 localStorage 檢查用戶是否已登入
-        const user = JSON.parse(localStorage.getItem("user") || "null");
+        // 檢測瀏覽器是否支持backdrop-filter
+        detectBackdropFilterSupport();
 
-        // 從服務器檢查會話狀態
+        // 先從 localStorage 檢查用戶是否已登入
+        const user = JSON.parse(localStorage.getItem("user") || "null"); // 從服務器檢查會話狀態
         fetch("/api/user/check-session", {
           method: "GET",
           credentials: "include",
@@ -313,6 +1039,7 @@
             throw new Error("未登入或會話已過期");
           })
           .then((data) => {
+            console.log("Session check response:", data); // 調試日誌
             // 用戶已登入，確保本地存儲也有用戶資料
             if (!user) {
               localStorage.setItem(
@@ -320,17 +1047,44 @@
                 JSON.stringify({
                   id: data.user_id,
                   username: data.username,
+                  is_admin: data.is_admin,
                 })
               );
             }
+
+            // 為管理員設置專業版資料
+            if (data.is_admin) {
+              data.tier = {
+                id: 3,
+                name: "專業版",
+                daily_quiz_limit: 999,
+                question_bank_size: 999,
+                remaining_daily_questions: 999,
+                has_advanced_analytics: true,
+                has_wrong_questions_review: true,
+                has_mock_exam: true,
+              };
+            }
+
+            // 檢查用戶級別和權限
+            checkUserTier(data);
+
             // 繼續加載儀表板數據
             loadDashboardData();
           })
           .catch((error) => {
-            console.log("用戶未登入:", error);
-            // 用戶未登入，清除本地存儲並重定向到登入頁面
-            localStorage.removeItem("user");
-            window.location.href = "/login";
+            console.error("Session check error:", error);
+            if (error.message === "Login required") {
+              localStorage.removeItem("user");
+              window.location.href = "/login";
+            } else {
+              console.error("Error checking session:", error);
+              // 顯示錯誤消息給用戶，但不要重定向
+              const errorDiv = document.createElement("div");
+              errorDiv.className = "error-message";
+              errorDiv.textContent = "載入資料時發生錯誤，請稍後再試";
+              document.querySelector(".container").prepend(errorDiv);
+            }
           });
 
         // 添加登出功能
@@ -356,22 +1110,248 @@
                 localStorage.removeItem("user");
                 window.location.href = "/"; // 即使出錯也跳轉到首頁
               });
-          });
+          }); // 檢測瀏覽器是否支持backdrop-filter
+        function detectBackdropFilterSupport() {
+          // 創建一個樣式檢測元素
+          const testEl = document.createElement("div");
+          testEl.style.cssText = "position:absolute;backdrop-filter:blur(2px);";
+          document.documentElement.appendChild(testEl);
 
-        // 儀表板數據加載函數
+          // 檢查計算後的樣式是否包含backdrop-filter
+          const computedStyle = window.getComputedStyle(testEl);
+          const hasSupport =
+            (computedStyle.backdropFilter !== undefined &&
+              computedStyle.backdropFilter !== "none") ||
+            (computedStyle.webkitBackdropFilter !== undefined &&
+              computedStyle.webkitBackdropFilter !== "none");
+
+          // 移除測試元素
+          document.documentElement.removeChild(testEl);
+
+          // 如果不支持，添加一個類名到body，以便CSS可以提供替代方案
+          if (!hasSupport) {
+            document.body.classList.add("no-backdrop-filter");
+            console.log(
+              "This browser does not support backdrop-filter. Using fallback."
+            );
+          }
+
+          return hasSupport;
+        }
+
+        // 更新用戶級別信息
+        function updateTierInfo(tierData) {
+          if (!tierData) return;
+
+          // 更新級別徽章
+          const tierBadge = document.getElementById("tier-badge");
+
+          // 根據級別設置不同的圖標和樣式
+          tierBadge.className = "tier-badge";
+          if (tierData.name === "免費版" || tierData.id === 1) {
+            tierBadge.classList.add("free-tier");
+            tierBadge.innerHTML = '<i class="fas fa-user"></i> 免費版';
+          } else if (tierData.name === "標準版" || tierData.id === 2) {
+            tierBadge.classList.add("standard-tier");
+            tierBadge.innerHTML = '<i class="fas fa-award"></i> 標準版';
+          } else if (tierData.name === "專業版" || tierData.id === 3) {
+            tierBadge.classList.add("pro-tier");
+            tierBadge.innerHTML = '<i class="fas fa-crown"></i> 專業版';
+          }
+
+          // 更新級別詳情
+          document.getElementById("daily-limit").textContent =
+            tierData.daily_quiz_limit;
+          document.getElementById("question-bank-size").textContent =
+            tierData.question_bank_size;
+          document.getElementById("remaining-questions").textContent =
+            tierData.remaining_daily_questions;
+
+          // 如果是專業版用戶，隱藏升級按鈕
+          const upgradeBtn = document.getElementById("upgrade-btn");
+          if (tierData.name === "專業版" || tierData.id === 3) {
+            upgradeBtn.style.display = "none";
+          } else if (!window.userTierInfo?.isAdmin) {
+            // 如果不是管理員才顯示升級按鈕
+            upgradeBtn.style.display = "block";
+            upgradeBtn.addEventListener("click", function () {
+              window.location.href = "/"; // 跳轉到首頁，可以改為升級頁面的URL
+            });
+          }
+        }
+
+        // 根據用戶級別處理高級功能顯示
+        function checkUserTier(data) {
+          console.log("User data:", data); // 調試用
+          // 檢查用戶是否是管理員
+          const isAdmin = data.is_admin === true || data.is_admin === 1;
+          console.log("Is admin:", isAdmin); // 調試用
+
+          // 如果是管理員，直接設置專業版權限
+          if (isAdmin) {
+            const adminTierData = {
+              name: "專業版",
+              id: 3,
+              daily_quiz_limit: 999,
+              question_bank_size: 999,
+              remaining_daily_questions: 999,
+              has_advanced_analytics: true,
+              has_wrong_questions_review: true,
+              has_mock_exam: true,
+            };
+
+            console.log("Setting admin tier data:", adminTierData); // 調試用
+
+            // 更新用戶級別信息
+            updateTierInfo(adminTierData);
+
+            // 設置所有高級功能為可用
+            window.userTierInfo = {
+              isAdmin: true,
+              isFreeUser: false,
+              hasWrongQuestionsReview: true,
+              hasAdvancedAnalytics: true,
+              hasMockExam: true,
+              questionBankSize: 999,
+            };
+
+            // 立即顯示所有高級功能
+            const premiumSections =
+              document.querySelectorAll(".premium-section");
+            premiumSections.forEach((section) => {
+              section.style.display = "block";
+              section.classList.remove("premium-section");
+            });
+
+            // 隱藏所有升級提示
+            const upgradeOverlays =
+              document.querySelectorAll(".upgrade-overlay");
+            upgradeOverlays.forEach(
+              (overlay) => (overlay.style.display = "none")
+            );
+
+            // 立即隱藏升級按鈕
+            const upgradeBtn = document.getElementById("upgrade-btn");
+            if (upgradeBtn) upgradeBtn.style.display = "none";
+
+            return; // 提前結束函數
+          }
+
+          const isFreeUser =
+            !isAdmin &&
+            (!data.tier || data.tier?.name === "免費版" || data.tier?.id === 1);
+
+          // 獲取所有相關區塊
+          const wrongQuestionsSection = document.getElementById(
+            "wrong-questions-section"
+          );
+          const analyticsSection = document.getElementById("analytics-section");
+          const premiumFeaturesCard = document.getElementById(
+            "premium-features-card"
+          );
+          const analyticsUpgrade = document.getElementById("analytics-upgrade");
+          const wrongQuestionsUpgrade = document.getElementById(
+            "wrong-questions-upgrade"
+          );
+
+          if (isAdmin) {
+            // 管理員顯示所有功能，隱藏所有升級提示
+            if (wrongQuestionsSection) {
+              wrongQuestionsSection.style.display = "block";
+              wrongQuestionsSection.classList.remove("premium-section");
+            }
+            if (analyticsSection) {
+              analyticsSection.style.display = "block";
+              analyticsSection.classList.remove("premium-section");
+            }
+            if (premiumFeaturesCard) premiumFeaturesCard.style.display = "none";
+            if (analyticsUpgrade) analyticsUpgrade.style.display = "none";
+            if (wrongQuestionsUpgrade)
+              wrongQuestionsUpgrade.style.display = "none";
+
+            // 為管理員設置專業版標記
+            updateTierInfo({
+              name: "專業版",
+              id: 3,
+              daily_quiz_limit: 999,
+              question_bank_size: 999,
+              remaining_daily_questions: 999,
+              has_advanced_analytics: true,
+              has_wrong_questions_review: true,
+              has_mock_exam: true,
+            });
+
+            // 隱藏升級按鈕
+            const upgradeBtn = document.getElementById("upgrade-btn");
+            if (upgradeBtn) upgradeBtn.style.display = "none";
+          } else if (isFreeUser) {
+            // 免費用戶隱藏高級功能，顯示升級卡片
+            if (wrongQuestionsSection)
+              wrongQuestionsSection.style.display = "none";
+            if (analyticsSection) analyticsSection.style.display = "none";
+            if (premiumFeaturesCard)
+              premiumFeaturesCard.style.display = "block";
+            if (analyticsUpgrade) analyticsUpgrade.style.display = "block";
+            if (wrongQuestionsUpgrade)
+              wrongQuestionsUpgrade.style.display = "block";
+          } else {
+            // 付費用戶顯示已解鎖的功能
+            if (wrongQuestionsSection)
+              wrongQuestionsSection.style.display = "block";
+            if (analyticsSection) analyticsSection.style.display = "block";
+            if (premiumFeaturesCard) premiumFeaturesCard.style.display = "none";
+            if (analyticsUpgrade) analyticsUpgrade.style.display = "none";
+            if (wrongQuestionsUpgrade)
+              wrongQuestionsUpgrade.style.display = "none";
+          }
+
+          // 儲存用戶級別資訊以供其他函數使用
+          window.userTierInfo = {
+            isAdmin: isAdmin,
+            isFreeUser: isFreeUser,
+            // 管理員擁有所有權限
+            hasWrongQuestionsReview: isAdmin
+              ? true
+              : data.tier?.has_wrong_questions_review,
+            hasAdvancedAnalytics: isAdmin
+              ? true
+              : data.tier?.has_advanced_analytics,
+            hasMockExam: isAdmin ? true : data.tier?.has_mock_exam,
+            questionBankSize: isAdmin
+              ? 999
+              : data.tier?.question_bank_size || 200,
+          };
+        }
+
+        // 為高級功能添加吸引注意力的動畫
+        function animateAttention(element) {
+          setTimeout(() => {
+            element.classList.add("attention-highlight");
+            setTimeout(() => {
+              element.classList.remove("attention-highlight");
+            }, 600);
+          }, 500);
+
+          // 再次高亮，增加注意力
+          setTimeout(() => {
+            element.classList.add("attention-highlight");
+            setTimeout(() => {
+              element.classList.remove("attention-highlight");
+            }, 600);
+          }, 1500);
+        } // 儀表板數據加載函數
         function loadDashboardData() {
-          // 獲取用戶進度
           fetch("/api/user/progress", {
-            credentials: "include", // 確保包含認證信息
+            credentials: "include",
           })
             .then((response) => {
               if (!response.ok) {
                 if (response.status === 401) {
-                  localStorage.removeItem("user");
-                  window.location.href = "/login";
                   throw new Error("Login required");
                 }
-                throw new Error("Network response was not ok");
+                return response.json().then((err) => {
+                  throw new Error(err.error || "Server error");
+                });
               }
               return response.json();
             })
@@ -381,175 +1361,138 @@
                 data.overall.total_answered;
               document.getElementById("correct-count").textContent =
                 data.overall.correct_count;
-
               const accuracy = data.overall.accuracy.toFixed(1);
               document.getElementById("accuracy").textContent = accuracy + "%";
 
+              // 更新用戶級別顯示
+              if (data.user_tier) {
+                const tierBadge = document.getElementById("tier-badge");
+                if (data.user_tier.is_admin) {
+                  tierBadge.className = "tier-badge pro-tier";
+                  tierBadge.innerHTML = '<i class="fas fa-crown"></i> 專業版';
+
+                  // 更新管理員的其他顯示
+                  document.getElementById("daily-limit").textContent = "無限";
+                  document.getElementById("question-bank-size").textContent =
+                    "無限";
+                  document.getElementById("remaining-questions").textContent =
+                    "無限";
+                } else {
+                  // 非管理員用戶的顯示邏輯
+                  const tierClass =
+                    data.user_tier.name === "專業版"
+                      ? "pro-tier"
+                      : data.user_tier.name === "標準版"
+                      ? "standard-tier"
+                      : "free-tier";
+                  const iconClass =
+                    data.user_tier.name === "專業版"
+                      ? "fa-crown"
+                      : data.user_tier.name === "標準版"
+                      ? "fa-award"
+                      : "fa-user";
+                  tierBadge.className = `tier-badge ${tierClass}`;
+                  tierBadge.innerHTML = `<i class="fas ${iconClass}"></i> ${data.user_tier.name}`;
+                }
+              }
+
+              // 更新進度條
               const accuracyBar = document.getElementById("accuracy-bar");
               accuracyBar.style.width = accuracy + "%";
               accuracyBar.textContent = accuracy + "%";
 
               // 更新最近答題記錄
-              const recentActivitiesBody = document.getElementById(
-                "recent-activities-body"
-              );
-              const recentActivitiesEmpty = document.getElementById(
-                "recent-activities-empty"
-              );
+              updateRecentActivities(data.recent_activities);
 
-              if (data.recent_activities && data.recent_activities.length > 0) {
-                recentActivitiesEmpty.style.display = "none";
-
-                recentActivitiesBody.innerHTML = "";
-                data.recent_activities.forEach((activity) => {
-                  const row = document.createElement("tr");
-
-                  const questionNumberCell = document.createElement("td");
-                  questionNumberCell.textContent = activity.question_number;
-                  row.appendChild(questionNumberCell);
-
-                  const questionTextCell = document.createElement("td");
-                  questionTextCell.textContent =
-                    activity.question_text.length > 50
-                      ? activity.question_text.substring(0, 50) + "..."
-                      : activity.question_text;
-                  row.appendChild(questionTextCell);
-
-                  const statusCell = document.createElement("td");
-                  const statusBadge = document.createElement("span");
-                  statusBadge.classList.add("status-badge");
-                  if (activity.is_correct) {
-                    statusBadge.classList.add("status-correct");
-                    statusBadge.textContent = "正確";
-                  } else {
-                    statusBadge.classList.add("status-wrong");
-                    statusBadge.textContent = "錯誤";
-                  }
-                  statusCell.appendChild(statusBadge);
-                  row.appendChild(statusCell);
-
-                  const timeCell = document.createElement("td");
-                  const date = new Date(activity.answer_time);
-                  timeCell.textContent = date.toLocaleString();
-                  row.appendChild(timeCell);
-
-                  recentActivitiesBody.appendChild(row);
-                });
-              } else {
-                recentActivitiesEmpty.style.display = "block";
-              }
+              // 處理高級分析數據
+              handleAnalyticsData(data);
             })
-            .catch((error) => console.error("Error:", error));
+            .catch((error) => {
+              console.error("Progress data error:", error);
+              // 顯示錯誤消息給用戶
+              const errorDiv = document.createElement("div");
+              errorDiv.className = "error-message";
+              errorDiv.textContent = "載入進度資料時發生錯誤，請稍後再試";
+              document.querySelector(".container").prepend(errorDiv);
+            });
 
-          // 獲取用戶錯題
-          fetch("/api/user/wrong-questions", {
-            credentials: "include", // 確保包含認證信息
-          })
-            .then((response) => {
-              if (!response.ok) {
-                if (response.status === 401) {
-                  // 登入會話已過期
-                  throw new Error("Login required");
-                }
-                throw new Error("Network response was not ok");
-              }
-              return response.json();
-            })
-            .then((data) => {
-              const wrongQuestionsBody = document.getElementById(
-                "wrong-questions-body"
-              );
-              const wrongQuestionsEmpty = document.getElementById(
-                "wrong-questions-empty"
-              );
-              const paginationContainer = document.getElementById(
-                "wrong-questions-pagination"
-              );
-
-              if (data && data.length > 0) {
-                wrongQuestionsEmpty.style.display = "none";
-
-                // 分頁設置
-                const itemsPerPage = 5;
-                const totalPages = Math.ceil(data.length / itemsPerPage);
-                let currentPage = 1;
-
-                // 渲染錯題
-                function renderWrongQuestions(page) {
-                  const start = (page - 1) * itemsPerPage;
-                  const end = start + itemsPerPage;
-                  const paginatedData = data.slice(start, end);
-
-                  wrongQuestionsBody.innerHTML = "";
-                  paginatedData.forEach((question) => {
-                    const row = document.createElement("tr");
-
-                    const questionNumberCell = document.createElement("td");
-                    questionNumberCell.textContent = question.question_number;
-                    row.appendChild(questionNumberCell);
-
-                    const questionTextCell = document.createElement("td");
-                    questionTextCell.textContent =
-                      question.question_text.length > 50
-                        ? question.question_text.substring(0, 50) + "..."
-                        : question.question_text;
-                    row.appendChild(questionTextCell);
-
-                    const wrongAnswerCell = document.createElement("td");
-                    wrongAnswerCell.textContent = question.wrong_answer;
-                    row.appendChild(wrongAnswerCell);
-
-                    const correctAnswerCell = document.createElement("td");
-                    correctAnswerCell.textContent = question.correct_answer;
-                    row.appendChild(correctAnswerCell);
-
-                    const timeCell = document.createElement("td");
-                    const date = new Date(question.answered_at);
-                    timeCell.textContent = date.toLocaleString();
-                    row.appendChild(timeCell);
-
-                    const actionCell = document.createElement("td");
-                    const reviewBtn = document.createElement("a");
-                    reviewBtn.href = `/quiz?question=${question.question_number}`;
-                    reviewBtn.className = "review-btn";
-                    reviewBtn.textContent = "複習";
-                    actionCell.appendChild(reviewBtn);
-                    row.appendChild(actionCell);
-
-                    wrongQuestionsBody.appendChild(row);
-                  });
-                }
-
-                // 渲染分頁控制
-                function renderPagination() {
-                  paginationContainer.innerHTML = "";
-
-                  if (totalPages <= 1) return;
-
-                  for (let i = 1; i <= totalPages; i++) {
-                    const pageBtn = document.createElement("button");
-                    pageBtn.textContent = i;
-                    if (i === currentPage) {
-                      pageBtn.classList.add("active");
-                    }
-                    pageBtn.addEventListener("click", function () {
-                      currentPage = i;
-                      renderWrongQuestions(currentPage);
-                      renderPagination();
-                    });
-                    paginationContainer.appendChild(pageBtn);
-                  }
-                }
-
-                // 初始渲染
-                renderWrongQuestions(currentPage);
-                renderPagination();
-              } else {
-                wrongQuestionsEmpty.style.display = "block";
-              }
-            })
-            .catch((error) => console.error("Error:", error));
+          // 處理錯題集數據
+          if (window.userTierInfo && !window.userTierInfo.isFreeUser) {
+            loadWrongQuestions();
+          }
         }
+
+        function updateRecentActivities(activities) {
+          const recentActivitiesBody = document.getElementById(
+            "recent-activities-body"
+          );
+          const recentActivitiesEmpty = document.getElementById(
+            "recent-activities-empty"
+          );
+
+          if (activities && activities.length > 0) {
+            recentActivitiesEmpty.style.display = "none";
+            recentActivitiesBody.innerHTML = "";
+
+            activities.forEach((activity) => {
+              const row = document.createElement("tr");
+
+              const questionNumberCell = document.createElement("td");
+              questionNumberCell.textContent = activity.question_number;
+              row.appendChild(questionNumberCell);
+
+              const questionTextCell = document.createElement("td");
+              questionTextCell.textContent =
+                activity.question_text.length > 50
+                  ? activity.question_text.substring(0, 50) + "..."
+                  : activity.question_text;
+              row.appendChild(questionTextCell);
+
+              const statusCell = document.createElement("td");
+              const statusBadge = document.createElement("span");
+              statusBadge.classList.add("status-badge");
+              statusBadge.classList.add(
+                activity.is_correct ? "status-correct" : "status-wrong"
+              );
+              statusBadge.textContent = activity.is_correct ? "正確" : "錯誤";
+              statusCell.appendChild(statusBadge);
+              row.appendChild(statusCell);
+
+              const timeCell = document.createElement("td");
+              const date = new Date(activity.answer_time);
+              timeCell.textContent = date.toLocaleString();
+              row.appendChild(timeCell);
+
+              recentActivitiesBody.appendChild(row);
+            });
+          } else {
+            recentActivitiesEmpty.style.display = "block";
+          }
+        }
+
+        function handleAnalyticsData(data) {
+          const analyticsSection = document.getElementById("analytics-section");
+          const analyticsUpgrade = document.getElementById("analytics-upgrade");
+
+          if (
+            data.category_progress &&
+            (window.userTierInfo.hasAdvancedAnalytics ||
+              window.userTierInfo.isAdmin)
+          ) {
+            if (analyticsSection) analyticsSection.style.display = "block";
+            if (analyticsUpgrade) analyticsUpgrade.style.display = "none";
+
+            renderCategoryProgress(data.category_progress);
+            if (data.weak_areas) {
+              renderWeakAreas(data.weak_areas);
+            }
+          } else {
+            if (analyticsSection) analyticsSection.style.display = "block";
+            if (analyticsUpgrade) analyticsUpgrade.style.display = "block";
+          }
+        }
+
+        // ... rest of the code ...
       });
     </script>
   </body>

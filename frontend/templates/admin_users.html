@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>用戶管理 - CEH 測驗系統</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <style>
+      .admin-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .admin-header h1 {
+        margin: 0;
+      }
+      .user-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      .user-table th,
+      .user-table td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      .user-table th {
+        background-color: #f5f5f5;
+      }
+      .user-table tr:hover {
+        background-color: #f9f9f9;
+      }
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+      }
+      .btn-edit {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .btn-edit:hover {
+        background-color: #45a049;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.4);
+      }
+      .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 400px;
+        border-radius: 5px;
+      }
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .close:hover {
+        color: black;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+      }
+      .form-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .form-actions {
+        text-align: right;
+        margin-top: 15px;
+      }
+      .btn-save {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .btn-save:hover {
+        background-color: #45a049;
+      }
+      .tier-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        color: white;
+      }
+      .tier-free {
+        background-color: #777;
+      }
+      .tier-standard {
+        background-color: #4caf50;
+      }
+      .tier-premium {
+        background-color: #f39c12;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="admin-container">
+      <div class="admin-header">
+        <h1>用戶管理</h1>
+        <div>
+          <a href="/dashboard" class="btn-edit">返回儀表板</a>
+        </div>
+      </div>
+
+      <table class="user-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>用戶名</th>
+            <th>電子郵件</th>
+            <th>用戶級別</th>
+            <th>註冊日期</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="user-table-body">
+          <!-- 用戶數據會在這裡動態加載 -->
+        </tbody>
+      </table>
+
+      <!-- 編輯用戶級別的模態框 -->
+      <div id="edit-tier-modal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>編輯用戶級別</h2>
+          <form id="edit-tier-form">
+            <input type="hidden" id="edit-user-id" />
+            <div class="form-group">
+              <label for="edit-username">用戶名</label>
+              <input
+                type="text"
+                id="edit-username"
+                readonly
+                style="
+                  width: 100%;
+                  padding: 8px;
+                  border: 1px solid #ddd;
+                  background-color: #f5f5f5;
+                  border-radius: 4px;
+                "
+              />
+            </div>
+            <div class="form-group">
+              <label for="edit-tier">用戶級別</label>
+              <select id="edit-tier">
+                <!-- 級別選項會在這裡動態加載 -->
+              </select>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-save">儲存變更</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const userTableBody = document.getElementById("user-table-body");
+        const editTierModal = document.getElementById("edit-tier-modal");
+        const editTierForm = document.getElementById("edit-tier-form");
+        const editUserId = document.getElementById("edit-user-id");
+        const editUsername = document.getElementById("edit-username");
+        const editTier = document.getElementById("edit-tier");
+        const closeModalBtn = document.querySelector(".close");
+
+        let users = [];
+        let tiers = [];
+
+        // 加載所有用戶
+        async function loadUsers() {
+          try {
+            const response = await fetch("/api/admin/users");
+            if (!response.ok) throw new Error("Failed to fetch users");
+
+            users = await response.json();
+            renderUsers();
+          } catch (error) {
+            console.error("Error loading users:", error);
+          }
+        }
+
+        // 加載所有用戶級別
+        async function loadTiers() {
+          try {
+            const response = await fetch("/api/admin/user-tiers");
+            if (!response.ok) throw new Error("Failed to fetch tiers");
+
+            tiers = await response.json();
+            renderTierOptions();
+          } catch (error) {
+            console.error("Error loading tiers:", error);
+          }
+        }
+
+        // 渲染用戶表格
+        function renderUsers() {
+          userTableBody.innerHTML = "";
+          users.forEach((user) => {
+            const row = document.createElement("tr");
+
+            // 根據級別名稱設置相應的 CSS 類
+            let tierClass = "tier-free";
+            if (user.tier_name === "標準版") {
+              tierClass = "tier-standard";
+            } else if (user.tier_name === "專業版") {
+              tierClass = "tier-premium";
+            }
+
+            row.innerHTML = `
+              <td>${user.id}</td>
+              <td>${user.username}</td>
+              <td>${user.email}</td>
+              <td><span class="tier-badge ${tierClass}">${
+              user.tier_name
+            }</span></td>
+              <td>${new Date(user.created_at).toLocaleString()}</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="btn-edit" data-user-id="${
+                    user.id
+                  }">編輯級別</button>
+                </div>
+              </td>
+            `;
+            userTableBody.appendChild(row);
+          });
+
+          // 綁定編輯按鈕事件
+          document.querySelectorAll(".btn-edit").forEach((button) => {
+            button.addEventListener("click", function () {
+              const userId = this.getAttribute("data-user-id");
+              openEditModal(userId);
+            });
+          });
+        }
+
+        // 渲染級別選項
+        function renderTierOptions() {
+          editTier.innerHTML = "";
+          tiers.forEach((tier) => {
+            const option = document.createElement("option");
+            option.value = tier.id;
+            option.textContent = `${tier.tier_name} - ${tier.description}`;
+            editTier.appendChild(option);
+          });
+        }
+
+        // 打開編輯模態框
+        function openEditModal(userId) {
+          const user = users.find((u) => u.id == userId);
+          if (user) {
+            editUserId.value = user.id;
+            editUsername.value = user.username;
+            editTier.value = user.user_tier_id;
+            editTierModal.style.display = "block";
+          }
+        }
+
+        // 更新用戶級別
+        async function updateUserTier(userId, tierId) {
+          try {
+            const response = await fetch(`/api/admin/users/${userId}/tier`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ tier_id: tierId }),
+            });
+
+            if (!response.ok) throw new Error("Failed to update user tier");
+
+            const result = await response.json();
+            console.log("User tier updated:", result);
+
+            // 更新本地用戶數據
+            const userIndex = users.findIndex((u) => u.id == userId);
+            if (userIndex !== -1) {
+              users[userIndex].user_tier_id = tierId;
+              users[userIndex].tier_name = result.user.tier_name;
+              renderUsers();
+            }
+
+            editTierModal.style.display = "none";
+          } catch (error) {
+            console.error("Error updating user tier:", error);
+            alert("更新用戶級別失敗：" + error.message);
+          }
+        }
+
+        // 綁定表單提交事件
+        editTierForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          const userId = editUserId.value;
+          const tierId = editTier.value;
+          updateUserTier(userId, tierId);
+        });
+
+        // 綁定關閉模態框事件
+        closeModalBtn.addEventListener("click", function () {
+          editTierModal.style.display = "none";
+        });
+
+        // 點擊模態框外部關閉模態框
+        window.addEventListener("click", function (event) {
+          if (event.target === editTierModal) {
+            editTierModal.style.display = "none";
+          }
+        });
+
+        // 初始化
+        loadUsers();
+        loadTiers();
+      });
+    </script>
+  </body>
+</html>

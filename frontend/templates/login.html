@@ -92,7 +92,19 @@
   </head>
   <body>
     <div class="container">
-      <div id="login-form">
+      <div
+        id="login-form"
+        {%
+        if
+        register
+        %}style="display: none"
+        {%
+        else
+        %}style="display: block"
+        {%
+        endif
+        %}
+      >
         <h1>用戶登入</h1>
         <div class="error-message" id="login-error"></div>
         {% if request.args.get('next') == '/quiz' or request.path == '/quiz' %}
@@ -109,11 +121,22 @@
         <button id="login-button">登入</button>
         <div class="toggle-form">
           <span>還沒有帳戶？</span>
-          <a href="#" id="show-register">註冊新帳戶</a>
+          <a href="/register" id="show-register">註冊新帳戶</a>
         </div>
       </div>
-
-      <div id="register-form" style="display: none">
+      <div
+        id="register-form"
+        {%
+        if
+        register
+        %}style="display: block"
+        {%
+        else
+        %}style="display: none"
+        {%
+        endif
+        %}
+      >
         <h1>用戶註冊</h1>
         <div class="error-message" id="register-error"></div>
         <div class="form-group">
@@ -142,26 +165,34 @@
         </div>
         <button id="register-button">註冊</button>
         <div class="toggle-form">
-          <span>已有帳戶？</span> <a href="#" id="show-login">登入</a>
+          <span>已有帳戶？</span> <a href="/login" id="show-login">登入</a>
         </div>
       </div>
     </div>
-
     <script>
+      // 如果用戶點擊頁面內的切換按鈕而不是使用導航
       document
         .getElementById("show-register")
         .addEventListener("click", function (e) {
-          e.preventDefault();
-          document.getElementById("login-form").style.display = "none";
-          document.getElementById("register-form").style.display = "block";
+          // 如果點擊的是頁面內切換按鈕，而不是直接導航到 /register
+          if (e.target.getAttribute("href") === "#") {
+            e.preventDefault();
+            document.getElementById("login-form").style.display = "none";
+            document.getElementById("register-form").style.display = "block";
+          }
+          // 否則讓默認導航行為執行
         });
 
       document
         .getElementById("show-login")
         .addEventListener("click", function (e) {
-          e.preventDefault();
-          document.getElementById("register-form").style.display = "none";
-          document.getElementById("login-form").style.display = "block";
+          // 如果點擊的是頁面內切換按鈕，而不是直接導航到 /login
+          if (e.target.getAttribute("href") === "#") {
+            e.preventDefault();
+            document.getElementById("register-form").style.display = "none";
+            document.getElementById("login-form").style.display = "block";
+          }
+          // 否則讓默認導航行為執行
         });
 
       // 註冊功能
@@ -310,10 +341,19 @@
         .addEventListener("click", function () {
           // 在2秒後檢查會話狀態
           setTimeout(checkSessionStatus, 2000);
-        });
-
-      // 頁面加載時檢查會話狀態
+        }); // 頁面加載時檢查會話狀態
       document.addEventListener("DOMContentLoaded", function () {
+        // 檢查當前URL是否為註冊頁面或包含註冊參數
+        const isRegisterPage = window.location.pathname === "/register";
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasRegisterParam = urlParams.get("register") === "true";
+
+        if (isRegisterPage || hasRegisterParam) {
+          // 如果是註冊頁面或有註冊參數，確保顯示註冊表單
+          document.getElementById("login-form").style.display = "none";
+          document.getElementById("register-form").style.display = "block";
+        }
+
         // 檢查會話狀態，如果已登入則重定向到儀表板
         checkSessionStatus();
       });

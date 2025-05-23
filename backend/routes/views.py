@@ -31,6 +31,7 @@ def dashboard_page():
 
 @views_bp.route('/register')
 def register_page():
+    # 明確地傳遞 register=True 參數
     return render_template('login.html', register=True)
 
 @views_bp.route('/contact')

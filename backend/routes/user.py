@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.db import get_db_connection
 from utils.auth import login_required, add_cors_headers
+from utils.user_tier import check_and_reset_daily_limit
 import mysql.connector
 
 user_bp = Blueprint('user', __name__)
@@ -32,9 +33,10 @@ def register():
     try:
         cursor = conn.cursor()
         try:
+            # 設置默認用戶級別為免費版（ID為1）
             cursor.execute('''
-                INSERT INTO users (username, password, email) 
-                VALUES (%s, %s, %s)
+                INSERT INTO users (username, password, email, user_tier_id, remaining_daily_questions) 
+                VALUES (%s, %s, %s, 1, 10)
             ''', (username, hashed_password, email))
             conn.commit()
             return add_cors_headers(jsonify({'message': 'User registered successfully'}))
@@ -72,9 +74,12 @@ def login():
     try:
         cursor = conn.cursor(dictionary=True)
         cursor.execute('''
-            SELECT id, username, password, email 
-            FROM users 
-            WHERE email = %s
+            SELECT u.id, u.username, u.password, u.email, u.user_tier_id, u.remaining_daily_questions, u.is_admin,
+                   t.tier_name, t.daily_quiz_limit, t.has_advanced_analytics, 
+                   t.has_wrong_questions_review, t.has_mock_exam, t.question_bank_size
+            FROM users u
+            JOIN user_tiers t ON u.user_tier_id = t.id
+            WHERE u.email = %s
         ''', (email,))
         user = cursor.fetchone()
         
@@ -88,15 +93,24 @@ def login():
         if not is_valid:
             print("Invalid password")
             return add_cors_headers(jsonify({'error': 'Invalid email or password'})), 401
+        
+        # 檢查用戶每日題目限制是否需要重置
+        check_and_reset_daily_limit(user['id'], user['daily_quiz_limit'])
             
         # 登入成功，設置會話
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['email'] = user['email']
-        session.modified = True  # 確保會話被保存
-        
-        print(f"Login successful for: {user['email']}")
-        print(f"Session: {session}")
+        session['user_tier_id'] = user['user_tier_id']
+        session['tier_name'] = user['tier_name']
+        session['remaining_daily_questions'] = user['remaining_daily_questions']
+        session['daily_quiz_limit'] = user['daily_quiz_limit']
+        session['has_advanced_analytics'] = user['has_advanced_analytics']
+        session['has_wrong_questions_review'] = user['has_wrong_questions_review']
+        session['has_mock_exam'] = user['has_mock_exam']
+        session['question_bank_size'] = user['question_bank_size']
+        session['is_admin'] = user['is_admin']
+        session.modified = True  # 確保會話被保存print(f"Login successful for: {user['email']}")
         
         # 檢查是否有next參數用於重定向
         next_url = data.get('next')
@@ -106,7 +120,18 @@ def login():
             'user': {
                 'id': user['id'],
                 'username': user['username'],
-                'email': user['email']
+                'email': user['email'],
+                'is_admin': user['is_admin'],
+                'tier': {
+                    'id': user['user_tier_id'],
+                    'name': user['tier_name'],
+                    'remaining_daily_questions': user['remaining_daily_questions'],
+                    'daily_quiz_limit': user['daily_quiz_limit'],
+                    'has_advanced_analytics': user['has_advanced_analytics'],
+                    'has_wrong_questions_review': user['has_wrong_questions_review'],
+                    'has_mock_exam': user['has_mock_exam'],
+                    'question_bank_size': user['question_bank_size']
+                }
             },
             'redirect': next_url if next_url else '/'  # 更改為首頁
         })
@@ -115,6 +140,46 @@ def login():
         
     except mysql.connector.Error as e:
         return add_cors_headers(jsonify({'error': str(e)})), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if conn:
+            conn.close()
+
+# 檢查並重置用戶每日題目限制
+def check_and_reset_daily_limit(user_id, daily_limit):
+    conn = get_db_connection()
+    if not conn:
+        return False
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # 檢查上次重置日期
+        cursor.execute('''
+            SELECT last_reset_date FROM users WHERE id = %s
+        ''', (user_id,))
+        result = cursor.fetchone()
+        
+        # 將日期轉換為字符串以進行比較
+        from datetime import date
+        today = date.today()
+        last_reset = result['last_reset_date']
+        
+        # 如果不是今天，則重置每日限制
+        if last_reset.strftime('%Y-%m-%d') != today.strftime('%Y-%m-%d'):
+            cursor.execute('''
+                UPDATE users 
+                SET remaining_daily_questions = %s, last_reset_date = %s
+                WHERE id = %s
+            ''', (daily_limit, today, user_id))
+            conn.commit()
+            return True
+        
+        return False
+    except mysql.connector.Error as e:
+        print(f"Error checking daily limit: {e}")
+        return False
     finally:
         if 'cursor' in locals():
             cursor.close()
@@ -144,14 +209,68 @@ def check_session():
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
         return add_cors_headers(response)
-        
+    
+    print("Checking session state:", session)  # 添加調試日誌
+    
     if 'user_id' in session:
-        return add_cors_headers(jsonify({
-            'status': 'authenticated',
-            'user_id': session['user_id'],
-            'username': session['username'],
-            'email': session.get('email', '')
-        }))
+        try:
+            conn = get_db_connection()
+            if not conn:
+                return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
+            
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute('''
+                SELECT u.id, u.username, u.email, u.user_tier_id, u.is_admin,
+                       t.tier_name, t.daily_quiz_limit, t.has_advanced_analytics, 
+                       t.has_wrong_questions_review, t.has_mock_exam, t.question_bank_size
+                FROM users u
+                JOIN user_tiers t ON u.user_tier_id = t.id
+                WHERE u.id = %s
+            ''', (session['user_id'],))
+            
+            user = cursor.fetchone()
+            
+            if user:
+                # 更新會話中的用戶信息
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['email'] = user['email']
+                session['user_tier_id'] = user['user_tier_id']
+                session['is_admin'] = user['is_admin']
+                session['tier_name'] = user['tier_name']
+                session.modified = True
+                
+                return add_cors_headers(jsonify({
+                    'status': 'authenticated',
+                    'user_id': user['id'],
+                    'username': user['username'],
+                    'email': user['email'],
+                    'is_admin': user['is_admin'],
+                    'tier': {
+                        'id': user['user_tier_id'],
+                        'name': user['tier_name'],
+                        'daily_quiz_limit': user['daily_quiz_limit'],
+                        'has_advanced_analytics': user['has_advanced_analytics'],
+                        'has_wrong_questions_review': user['has_wrong_questions_review'],
+                        'has_mock_exam': user['has_mock_exam'],
+                        'question_bank_size': user['question_bank_size']
+                    }
+                }))
+            else:
+                session.clear()
+                return add_cors_headers(jsonify({
+                    'status': 'unauthenticated',
+                    'redirect': '/login'
+                })), 401
+                
+        except Exception as e:
+            print(f"Error checking session: {str(e)}")  # 添加錯誤日誌
+            return add_cors_headers(jsonify({'error': str(e)})), 500
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if conn:
+                conn.close()
     else:
         return add_cors_headers(jsonify({
             'status': 'unauthenticated',
@@ -163,6 +282,15 @@ def check_session():
 @login_required
 def get_user_wrong_questions():
     user_id = session['user_id']
+    is_admin = session.get('is_admin', False)
+    has_wrong_questions_review = session.get('has_wrong_questions_review', False)
+    
+    # 檢查用戶是否有權限訪問錯題本
+    if not (has_wrong_questions_review or is_admin):
+        return add_cors_headers(jsonify({
+            'error': 'Feature not available',
+            'message': '錯題集與重點複習功能僅限標準版或專業版用戶使用，請升級您的帳戶以獲取此功能！'
+        })), 403
     
     conn = get_db_connection()
     if not conn:
@@ -219,6 +347,8 @@ def get_user_wrong_questions():
 @login_required
 def get_user_progress():
     user_id = session['user_id']
+    is_admin = session.get('is_admin', False)
+    has_advanced_analytics = session.get('has_advanced_analytics', False)
     
     conn = get_db_connection()
     if not conn:
@@ -230,8 +360,8 @@ def get_user_progress():
         # 統計總體進度
         cursor.execute('''
             SELECT 
-                COUNT(*) as total_answered,
-                SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct_count
+                IFNULL(COUNT(*), 0) as total_answered,
+                IFNULL(SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END), 0) as correct_count
             FROM user_progress
             WHERE user_id = %s
         ''', (user_id,))
@@ -250,14 +380,144 @@ def get_user_progress():
         
         recent_activities = cursor.fetchall()
         
-        return add_cors_headers(jsonify({
+        # 基本進度數據對所有用戶都可用        # 初始化基礎回應數據
+        total_answered = int(overall['total_answered']) if overall else 0
+        correct_count = int(overall['correct_count']) if overall else 0
+        
+        response = {
             'overall': {
-                'total_answered': overall['total_answered'] if overall else 0,
-                'correct_count': overall['correct_count'] if overall else 0,
-                'accuracy': (overall['correct_count'] / overall['total_answered'] * 100) if overall and overall['total_answered'] > 0 else 0
+                'total_answered': total_answered,
+                'correct_count': correct_count,
+                'accuracy': (correct_count / total_answered * 100) if total_answered > 0 else 0
             },
-            'recent_activities': recent_activities
-        }))
+            'recent_activities': recent_activities or [],
+            'user_tier': {
+                'name': '專業版' if is_admin else session.get('tier_name', '免費版'),
+                'is_admin': is_admin
+            }
+        }
+        
+        # 管理員或高級會員可見的分析功能
+        if is_admin or has_advanced_analytics:
+            # 獲取類別進度分析
+            cursor.execute('''
+                SELECT c.category_name,
+                       COUNT(*) as total_questions,
+                       SUM(CASE WHEN up.is_correct = 1 THEN 1 ELSE 0 END) as correct_count
+                FROM user_progress up
+                JOIN questions q ON up.question_id = q.id
+                JOIN question_categories qc ON q.id = qc.question_id
+                JOIN categories c ON qc.category_id = c.id
+                WHERE up.user_id = %s
+                GROUP BY c.category_name
+            ''', (user_id,))
+            
+            category_progress = cursor.fetchall()
+            
+            # 添加類別進度到回應
+            response['category_progress'] = category_progress
+            
+            # 添加弱項分析
+            if category_progress:
+                # 計算每個類別的正確率
+                for category in category_progress:
+                    if category['total_questions'] > 0:
+                        category['accuracy'] = (category['correct_count'] / category['total_questions']) * 100
+                    else:
+                        category['accuracy'] = 0
+                
+                # 找出正確率最低的三個類別
+                weak_areas = sorted(category_progress, key=lambda x: x['accuracy'])[:3]
+                response['weak_areas'] = weak_areas
+        
+        return add_cors_headers(jsonify(response))
+    
+    except mysql.connector.Error as e:
+        return add_cors_headers(jsonify({'error': str(e)})), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if conn:
+            conn.close()
+
+# 用戶儀表板數據
+@user_bp.route('/api/user/dashboard-data', methods=['GET'])
+@login_required
+def get_dashboard_data():
+    user_id = session['user_id']
+    is_admin = session.get('is_admin', False)
+    has_advanced_analytics = session.get('has_advanced_analytics', False)
+    
+    conn = get_db_connection()
+    if not conn:
+        return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # 基礎統計數據
+        cursor.execute('''
+            SELECT 
+                COUNT(*) as total_answered,
+                SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as correct_count,
+                MAX(answer_time) as last_answer_time
+            FROM user_progress
+            WHERE user_id = %s
+        ''', (user_id,))
+        
+        stats = cursor.fetchone()
+        
+        # 獲取最近的活動記錄
+        cursor.execute('''
+            SELECT up.is_correct, up.answer_time, q.question_text,
+                   q.question_number
+            FROM user_progress up
+            JOIN questions q ON up.question_id = q.id
+            WHERE up.user_id = %s
+            ORDER BY up.answer_time DESC
+            LIMIT 5
+        ''', (user_id,))
+        
+        recent_activities = cursor.fetchall()
+        
+        response = {
+            'stats': {
+                'totalAnswered': stats['total_answered'] if stats else 0,
+                'correctCount': stats['correct_count'] if stats else 0,
+                'accuracy': round((stats['correct_count'] / stats['total_answered'] * 100), 2) if stats and stats['total_answered'] > 0 else 0,
+                'lastAnswerTime': stats['last_answer_time'].strftime('%Y-%m-%d %H:%M:%S') if stats and stats['last_answer_time'] else None
+            },
+            'recentActivities': recent_activities
+        }
+        
+        # 如果用戶有高級分析權限，添加更多詳細數據
+        if has_advanced_analytics or is_admin:
+            cursor.execute('''
+                SELECT 
+                    c.category_name,
+                    COUNT(*) as total_questions,
+                    SUM(CASE WHEN up.is_correct = 1 THEN 1 ELSE 0 END) as correct_count
+                FROM user_progress up
+                JOIN questions q ON up.question_id = q.id
+                JOIN question_categories qc ON q.id = qc.question_id
+                JOIN categories c ON qc.category_id = c.id
+                WHERE up.user_id = %s
+                GROUP BY c.category_name
+            ''', (user_id,))
+            
+            category_progress = cursor.fetchall()
+            
+            # 計算每個類別的正確率
+            for category in category_progress:
+                category['accuracy'] = round((category['correct_count'] / category['total_questions'] * 100), 2) if category['total_questions'] > 0 else 0
+            
+            response['categoryProgress'] = category_progress
+            
+            # 找出最弱的三個類別
+            weak_areas = sorted(category_progress, key=lambda x: x['accuracy'])[:3]
+            response['weakAreas'] = weak_areas
+        
+        return add_cors_headers(jsonify(response))
     
     except mysql.connector.Error as e:
         return add_cors_headers(jsonify({'error': str(e)})), 500

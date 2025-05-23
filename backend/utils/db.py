@@ -25,14 +25,60 @@ def init_db():
     try:
         cursor = conn.cursor()
         
-        # 創建用戶表
+        # 創建用戶級別表
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_tiers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            tier_name VARCHAR(50) UNIQUE NOT NULL,
+            daily_quiz_limit INT NOT NULL,
+            has_advanced_analytics BOOLEAN NOT NULL DEFAULT FALSE,
+            has_wrong_questions_review BOOLEAN NOT NULL DEFAULT FALSE,
+            has_mock_exam BOOLEAN NOT NULL DEFAULT FALSE,
+            question_bank_size INT NOT NULL,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        
+        # 檢查是否已存在用戶級別數據
+        cursor.execute("SELECT COUNT(*) as count FROM user_tiers")
+        result = cursor.fetchone()
+          # 如果沒有數據，插入預設的用戶級別
+        if result[0] == 0:
+            cursor.execute('''
+            INSERT INTO user_tiers (tier_name, daily_quiz_limit, has_advanced_analytics, 
+                                  has_wrong_questions_review, has_mock_exam, question_bank_size, description)
+            VALUES ('免費版', 10, FALSE, FALSE, FALSE, 200, '基本功能，每日限制10題')
+            ''')
+            
+            # 添加高級用戶級別
+            cursor.execute('''
+            INSERT INTO user_tiers (tier_name, daily_quiz_limit, has_advanced_analytics, 
+                                  has_wrong_questions_review, has_mock_exam, question_bank_size, description)
+            VALUES ('標準版', 50, TRUE, TRUE, FALSE, 400, '標準功能，每日限制50題，包含進階分析和錯題本')
+            ''')
+            
+            # 添加專業用戶級別
+            cursor.execute('''
+            INSERT INTO user_tiers (tier_name, daily_quiz_limit, has_advanced_analytics, 
+                                  has_wrong_questions_review, has_mock_exam, question_bank_size, description)
+            VALUES ('專業版', 999, TRUE, TRUE, TRUE, 999, '完整功能，無每日限制，包含所有題庫和模擬考試')
+            ''')
+            
+            conn.commit()
+            print("已創建默認用戶級別")
+          # 創建用戶表
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(50) UNIQUE NOT NULL,
             password VARCHAR(255) NOT NULL,
             email VARCHAR(100) UNIQUE NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            user_tier_id INT NOT NULL DEFAULT 1,
+            remaining_daily_questions INT DEFAULT 10,
+            last_reset_date DATE DEFAULT (CURRENT_DATE),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_tier_id) REFERENCES user_tiers(id)
         )
         ''')
         

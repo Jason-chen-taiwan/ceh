@@ -13,6 +13,7 @@ from routes.questions import questions_bp
 from routes.views import views_bp
 from routes.cors import cors_bp
 from routes.session import session_bp
+from routes.admin import admin_bp
 
 # Import utilities
 from utils.db import init_db
@@ -46,6 +47,7 @@ app.register_blueprint(questions_bp)
 app.register_blueprint(views_bp)
 app.register_blueprint(cors_bp)
 app.register_blueprint(session_bp)
+app.register_blueprint(admin_bp)
 
 # 確保所有回應都添加 CORS 標頭
 @app.after_request

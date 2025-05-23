@@ -16,6 +16,14 @@ const API_BASE_URL = "/api";
 // 添加新的全域變數
 let isReviewMode = false; // 用來標記是否在複習模式
 
+// 基本fetch選項，包含認證
+const fetchOptions = {
+  credentials: "include",
+  headers: {
+    "Content-Type": "application/json",
+  },
+};
+
 // 等待 DOM 完全載入後再執行
 document.addEventListener("DOMContentLoaded", function () {
   // 取得 DOM 元素參考
@@ -50,68 +58,100 @@ document.addEventListener("DOMContentLoaded", function () {
         label.textContent = `${choice.choice_letter}. ${choice.choice_text}`;
       }
     });
-  }
 
-  // 重置問題狀態
-  function resetQuestionState() {
-    // 重置選項狀態
-    document.querySelectorAll('input[name="answer"]').forEach((radio) => {
-      radio.checked = false;
-      radio.disabled = false; // 重新啟用 radio buttons
-    });
-
-    // 重置選項的視覺樣式
-    document.querySelectorAll(".option").forEach((option) => {
-      option.style.cursor = "pointer"; // 恢復滑鼠指標
-      option.style.opacity = "1"; // 恢復完整不透明度
-    });
-
-    // 重置按鈕狀態
-    elements.submitBtn.disabled = true;
-    elements.submitBtn.style.display = "block"; // 確保提交按鈕顯示
-    elements.nextBtn.style.display = "none"; // 隱藏下一題按鈕
-    elements.nextBtn.classList.add("hidden");
+    // 重置選項選擇
+    resetAnswerSelection();
+    // 隱藏回饋
     elements.feedbackDiv.classList.add("hidden");
-
-    selectedAnswer = null;
+    // 禁用提交按鈕
+    elements.submitBtn.disabled = true;
+    // 隱藏下一題按鈕
+    elements.nextBtn.classList.add("hidden");
+    // 顯示提交按鈕
+    elements.submitBtn.classList.remove("hidden");
   }
-
-  // 載入問題
+  // 加載問題
   async function loadQuestion(questionNumber) {
     try {
       const response = await fetch(
         `${API_BASE_URL}/questions/${questionNumber}`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
+        { ...fetchOptions, method: "GET" }
       );
-
       if (!response.ok) {
-        throw new Error("Failed to fetch question");
-      }
+        if (response.status === 403) {
+          // 如果問題超出用戶級別或達到每日限制
+          const errorData = await response.json();
 
-      const data = await response.json();
-      displayQuestion(data);
-      resetQuestionState();
+          // 清空原有内容
+          elements.questionText.innerHTML = "";
+
+          // 創建標題
+          const errorTitle = document.createElement("h3");
+          errorTitle.textContent = "題目訪問限制";
+          errorTitle.style.color = "#e74c3c";
+          errorTitle.style.marginBottom = "1rem";
+          elements.questionText.appendChild(errorTitle);
+
+          // 創建錯誤信息
+          const errorMessage = document.createElement("p");
+          errorMessage.textContent = errorData.message || "此問題暫時無法訪問";
+          errorMessage.style.marginBottom = "1.5rem";
+          elements.questionText.appendChild(errorMessage);
+
+          // 添加升級信息
+          const upgradeInfo = document.createElement("div");
+          upgradeInfo.classList.add("upgrade-info");
+          upgradeInfo.innerHTML = `
+            <p>⚠️ 免費版用戶功能限制 ⚠️</p>
+            <p>您當前正在嘗試訪問的功能或題目超出了免費用戶的限制範圍。</p>
+            <p>升級到標準版或專業版即可解鎖全部題庫，並獲得更多進階功能！</p>
+            <button class="upgrade-button" id="contact-admin-btn">聯繫管理員升級帳戶</button>
+          `;
+          elements.questionText.appendChild(upgradeInfo);
+
+          // 為升級按鈕添加事件處理
+          setTimeout(() => {
+            const contactAdminBtn =
+              document.getElementById("contact-admin-btn");
+            if (contactAdminBtn) {
+              contactAdminBtn.addEventListener("click", () => {
+                alert(
+                  "請發送郵件至 admin@cehquiz.com 或聯系您的管理員進行帳戶升級"
+                );
+              });
+            }
+          }, 100);
+
+          document.querySelector(".options").style.display = "none";
+          elements.submitBtn.disabled = true;
+          elements.submitBtn.classList.add("hidden");
+
+          // 顯示一個"繼續"按鈕，跳到下一題
+          elements.nextBtn.textContent = "返回可用題目";
+          elements.nextBtn.style.display = "block";
+          elements.nextBtn.classList.remove("hidden");
+
+          return;
+        }
+        throw new Error("無法加載問題");
+      }
+      const question = await response.json();
+      displayQuestion(question);
     } catch (error) {
-      console.error("Error:", error);
-      elements.questionText.textContent = "載入問題時發生錯誤";
+      console.error("加載問題失敗:", error);
+      showError("無法加載問題，請稍後再試");
     }
   }
 
-  // 檢查答案
-  async function checkAnswer() {
+  // 提交答案
+  async function submitAnswer() {
     if (!selectedAnswer) return;
 
     try {
       const response = await fetch(`${API_BASE_URL}/answers`, {
         method: "POST",
+        credentials: "include",
         headers: {
-          Accept: "application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -120,361 +160,288 @@ document.addEventListener("DOMContentLoaded", function () {
         }),
       });
 
-      const data = await response.json();
-      showFeedback(data);
-    } catch (error) {
-      console.error("Error:", error);
-      elements.feedbackDiv.textContent = "檢查答案時發生錯誤";
-      elements.feedbackDiv.classList.remove("hidden");
-    }
-  }
+      if (!response.ok) {
+        throw new Error("無法提交答案");
+      }
 
-  // 顯示答案反饋
-  function showFeedback(result) {
-    elements.feedbackDiv.classList.remove("hidden", "correct", "incorrect");
+      const result = await response.json();
+      showFeedback(result.correct, selectedAnswer, result.correct_answer);
 
-    if (result.correct) {
-      elements.feedbackDiv.classList.add("correct");
-      elements.feedbackDiv.textContent = "答對了！";
-      if (!isReviewMode) correctCount++; // 只在非複習模式下計分
-    } else {
-      elements.feedbackDiv.classList.add("incorrect");
-      elements.feedbackDiv.textContent = `答錯了！正確答案是: ${result.correct_answer}`;
-      if (!isReviewMode) {
-        // 只在非複習模式下記錄錯誤
+      if (result.correct) {
+        correctCount++;
+      } else {
         incorrectCount++;
+        // 添加到錯誤列表
         wrongAnswers.push({
           questionNumber: currentQuestion,
-          questionText: elements.questionText.textContent,
-          userAnswer: selectedAnswer,
+          wrongAnswer: selectedAnswer,
           correctAnswer: result.correct_answer,
         });
-        currentBatchWrongAnswers.push({
-          questionNumber: currentQuestion,
-          questionText: elements.questionText.textContent,
-          userAnswer: selectedAnswer,
-          correctAnswer: result.correct_answer,
-        });
-      }
-    }
-
-    // 禁用所有選項
-    document.querySelectorAll('input[name="answer"]').forEach((radio) => {
-      radio.disabled = true;
-    });
-
-    // 禁用標籤的點擊事件
-    document.querySelectorAll(".option").forEach((option) => {
-      option.style.cursor = "not-allowed";
-      option.style.opacity = "0.7";
-    });
-
-    // 更新按鈕狀態
-    elements.submitBtn.style.display = "none"; // 隱藏提交按鈕
-    elements.nextBtn.style.display = "block"; // 顯示下一題按鈕
-    elements.nextBtn.classList.remove("hidden");
-
-    updateScore();
-  }
-
-  // 向伺服器提交答案
-  function submitAnswer(answer) {
-    const API_URL = `${API_BASE_URL}/answers`;
-
-    fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include", // 確保發送會話Cookie
-      body: JSON.stringify({
-        questionNumber: currentQuestion,
-        answer: answer,
-      }),
-    })
-      .then((response) => response.json())
-      .then((result) => {
-        // 顯示反饋
-        elements.feedbackDiv.classList.remove("hidden");
-        if (result.correct) {
-          elements.feedbackDiv.innerHTML = `<span class="correct">正確!</span>`;
-          elements.feedbackDiv.className = "feedback correct";
-          correctCount++;
-        } else {
-          elements.feedbackDiv.innerHTML = `<span class="wrong">錯誤!</span> 正確答案是: ${result.correct_answer}`;
-          elements.feedbackDiv.className = "feedback wrong";
-          incorrectCount++;
-
-          // 儲存錯題記錄
-          if (!isReviewMode) {
-            wrongAnswers.push({
-              questionNumber: currentQuestion,
-              questionText: elements.questionText.textContent,
-              userAnswer: selectedAnswer,
-              correctAnswer: result.correct_answer,
-            });
-          }
-          // 添加到當前批次的錯題
-          currentBatchWrongAnswers.push({
-            questionNumber: currentQuestion,
-            questionText: elements.questionText.textContent,
-            userAnswer: selectedAnswer,
-            correctAnswer: result.correct_answer,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        elements.feedbackDiv.innerHTML = `<span class="wrong">提交答案時發生錯誤，請稍後再試。</span>`;
-        elements.feedbackDiv.className = "feedback wrong";
-      });
-  }
-
-  // 綁定事件監聽器
-  document.querySelectorAll('input[name="answer"]').forEach((radio) => {
-    radio.addEventListener("change", () => {
-      selectedAnswer = radio.value;
-      elements.submitBtn.disabled = false;
-    });
-  });
-
-  // 將原本的下一題處理函數抽離出來
-  function handleNormalNext() {
-    currentIndex++;
-    if (
-      currentIndex % BATCH_SIZE === 0 &&
-      currentBatchWrongAnswers.length > 0
-    ) {
-      showBatchReview();
-    } else if (currentIndex < allQuestionNumbers.length) {
-      loadQuestion(allQuestionNumbers[currentIndex]);
-    } else {
-      showQuizComplete();
-    }
-  }
-
-  elements.submitBtn.addEventListener("click", checkAnswer);
-  elements.nextBtn.addEventListener("click", handleNormalNext);
-
-  // 獲取所有題目編號並打亂順序
-  async function initializeQuestions() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/questions/all`);
-      if (!response.ok) throw new Error("Failed to fetch questions");
-
-      const questions = await response.json();
-      allQuestionNumbers = questions.map((q) => q.question_number);
-      // 使用 Fisher-Yates 演算法打亂題目順序
-      for (let i = allQuestionNumbers.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [allQuestionNumbers[i], allQuestionNumbers[j]] = [
-          allQuestionNumbers[j],
-          allQuestionNumbers[i],
-        ];
+        // 添加到當前批次錯誤列表
+        currentBatchWrongAnswers.push(currentQuestion);
       }
 
-      currentIndex = 0;
-      // 載入第一題
-      loadQuestion(allQuestionNumbers[currentIndex]);
+      // 更新分數
+      updateScore();
     } catch (error) {
-      console.error("Error initializing questions:", error);
-      elements.questionText.textContent = "初始化題目時發生錯誤";
+      console.error("提交答案失敗:", error);
+      showError("無法提交答案，請稍後再試");
     }
   }
 
-  // 修改完成測驗的處理
-  function showQuizComplete() {
-    elements.questionText.textContent = "測驗完成！";
+  // 顯示回饋
+  function showFeedback(isCorrect, selectedAns, correctAns) {
+    const feedbackDiv = elements.feedbackDiv;
+    feedbackDiv.classList.remove("hidden");
 
-    // 隱藏選項和按鈕
-    document.querySelector(".options").style.display = "none";
-    elements.submitBtn.style.display = "none";
-    elements.nextBtn.style.display = "none";
-
-    const totalQuestions = allQuestionNumbers.length;
-    const accuracy = Math.round((correctCount / totalQuestions) * 100);
-
-    // 生成錯誤題目列表的 HTML
-    let wrongAnswersHtml = "";
-    if (wrongAnswers.length > 0) {
-      wrongAnswersHtml = `
-        <div class="wrong-answers-list">
-          <h3>錯誤題目列表：</h3>
-          <ul>
-            ${wrongAnswers
-              .map(
-                (wrong) => `
-              <li>
-                <strong>題號 ${wrong.questionNumber}</strong><br>
-                問題：${wrong.questionText}<br>
-                你的答案：${wrong.userAnswer}<br>
-                正確答案：${wrong.correctAnswer}
-              </li>
-            `
-              )
-              .join("")}
-          </ul>
-        </div>
-      `;
+    if (isCorrect) {
+      feedbackDiv.textContent = "✓ 回答正確！";
+      feedbackDiv.classList.add("correct");
+      feedbackDiv.classList.remove("incorrect");
+    } else {
+      feedbackDiv.innerHTML = `✗ 回答錯誤！<br>您的答案: ${selectedAns}<br>正確答案: ${correctAns}`;
+      feedbackDiv.classList.add("incorrect");
+      feedbackDiv.classList.remove("correct");
     }
 
-    elements.feedbackDiv.classList.remove("hidden", "correct", "incorrect");
-    elements.feedbackDiv.classList.add("complete");
-    elements.feedbackDiv.innerHTML = `
-      <div class="quiz-summary">
-        <h3>測驗結果：</h3>
-        <p>總題數: ${totalQuestions}</p>
-        <p>正確: ${correctCount}</p>
-        <p>錯誤: ${incorrectCount}</p>
-        <p>正確率: ${accuracy}%</p>
-      </div>
-      ${wrongAnswersHtml}
-    `;
+    // 隱藏提交按鈕
+    elements.submitBtn.classList.add("hidden");
+    // 顯示下一題按鈕
+    elements.nextBtn.classList.remove("hidden");
   }
 
-  // 修改 showBatchReview 函數，添加選項顯示
-  async function showBatchReview() {
-    elements.questionText.textContent = "複習時間！";
-    document.querySelector(".options").style.display = "none";
-    elements.submitBtn.style.display = "none";
-    elements.nextBtn.style.display = "none";
+  // 顯示錯誤訊息
+  function showError(message) {
+    const errorDiv = document.createElement("div");
+    errorDiv.classList.add("error-message");
+    errorDiv.textContent = message;
+    document.querySelector(".quiz-content").appendChild(errorDiv);
+    setTimeout(() => {
+      errorDiv.remove();
+    }, 3000);
+  }
 
-    elements.feedbackDiv.classList.remove("hidden", "correct", "incorrect");
-    elements.feedbackDiv.classList.add("complete");
+  function getRandomQuestion() {
+    // 決定是從正常題庫還是錯題集中獲取問題
+    if (
+      isReviewMode &&
+      currentBatchWrongAnswers.length > 0 &&
+      currentIndex < currentBatchWrongAnswers.length
+    ) {
+      // 從當前批次錯題中獲取
+      return loadQuestion(currentBatchWrongAnswers[currentIndex++]);
+    } else if (
+      !isReviewMode &&
+      allQuestionNumbers.length > 0 &&
+      currentIndex < allQuestionNumbers.length
+    ) {
+      // 從預加載的題目中獲取
+      return loadQuestion(allQuestionNumbers[currentIndex++]);
+    } else {
+      // 沒有更多預加載題目或錯題，重新獲取
+      fetchRandomQuestion();
+    }
+  }
 
-    // 取得所有錯誤題目的詳細資訊
-    const wrongQuestionsDetails = await Promise.all(
-      currentBatchWrongAnswers.map(async (wrong) => {
-        const response = await fetch(
-          `${API_BASE_URL}/questions/${wrong.questionNumber}`
-        );
-        const questionData = await response.json();
-        return {
-          ...wrong,
-          choices: questionData.choices,
-        };
+  function fetchRandomQuestion() {
+    // 如果不是複習模式，隨機獲取一個新問題
+    if (!isReviewMode) {
+      // 如果沒有預加載題目，或者已經用完，直接從API獲取
+      fetch(`${API_BASE_URL}/questions/random`, {
+        ...fetchOptions,
+        method: "GET",
       })
-    );
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("無法獲取問題");
+          }
+          return response.json();
+        })
+        .then((question) => {
+          displayQuestion(question);
+        })
+        .catch((error) => {
+          console.error("獲取問題失敗:", error);
+          showError("無法加載問題，請稍後再試");
+        });
+    } else {
+      // 複習模式但沒有更多錯題，提示用戶
+      if (wrongAnswers.length === 0) {
+        showError("沒有錯題可複習");
+        return;
+      }
 
-    const reviewHtml = `
-      <div class="quiz-summary">
-        <h3>本批次複習（${BATCH_SIZE}題中的錯誤題目）：</h3>
-        <p>錯誤題數: ${currentBatchWrongAnswers.length}</p>
-      </div>
-      <div class="wrong-answers-list">
-        <ul>
-          ${wrongQuestionsDetails
-            .map(
-              (wrong) => `
-            <li>
-              <strong>題號 ${wrong.questionNumber}</strong><br>
-              問題：${wrong.questionText}<br>
-              <div class="choices-list">
-                ${wrong.choices
-                  .map(
-                    (choice) => `
-                  <div class="review-choice ${
-                    choice.choice_letter === wrong.correctAnswer
-                      ? "correct"
-                      : ""
-                  } ${
-                      choice.choice_letter === wrong.userAnswer ? "wrong" : ""
-                    }">
-                    ${choice.choice_letter}. ${choice.choice_text}
-                  </div>
-                `
-                  )
-                  .join("")}
-              </div>
-              <div class="answer-info">
-                你的答案：${wrong.userAnswer}<br>
-                正確答案：${wrong.correctAnswer}
-              </div>
-            </li>
-          `
-            )
-            .join("")}
-        </ul>
-      </div>
-      <button id="retry-btn" class="btn" style="background-color: #e74c3c; margin-top: 20px;">重新作答這些題目</button>
-    `;
-
-    elements.feedbackDiv.innerHTML = reviewHtml;
-
-    document.getElementById("retry-btn").addEventListener("click", () => {
-      const retryQuestions = currentBatchWrongAnswers.map(
-        (q) => q.questionNumber
-      );
-      startRetryQuestions(retryQuestions);
-    });
+      // 重置當前批次和索引
+      currentBatchWrongAnswers = [];
+      let count = 0;
+      // 最多取BATCH_SIZE個錯題
+      while (count < BATCH_SIZE && count < wrongAnswers.length) {
+        currentBatchWrongAnswers.push(wrongAnswers[count].questionNumber);
+        count++;
+      }
+      currentIndex = 0;
+      loadQuestion(currentBatchWrongAnswers[currentIndex++]);
+    }
   }
 
-  // 修改 startRetryQuestions 函數，將事件處理器定義為可重用的函數
-  function startRetryQuestions(retryQuestions) {
-    // 設置複習模式
-    isReviewMode = true;
+  // 重置答案選擇
+  function resetAnswerSelection() {
+    selectedAnswer = null;
+    document.querySelectorAll('input[name="answer"]').forEach((radio) => {
+      radio.checked = false;
+    });
+    elements.submitBtn.disabled = true;
+  }
 
-    // 暫存當前進度和題目
-    const originalQuestions = allQuestionNumbers.slice(currentIndex);
-
-    // 設置重試題目
-    allQuestionNumbers = retryQuestions;
-    currentIndex = 0;
-
-    // 清空當前批次錯誤題目
-    currentBatchWrongAnswers = [];
-
-    // 清除舊的事件處理
-    const oldSubmitBtn = elements.submitBtn;
-    const oldNextBtn = elements.nextBtn;
-
-    const newSubmitBtn = oldSubmitBtn.cloneNode(true);
-    const newNextBtn = oldNextBtn.cloneNode(true);
-
-    oldSubmitBtn.parentNode.replaceChild(newSubmitBtn, oldSubmitBtn);
-    oldNextBtn.parentNode.replaceChild(newNextBtn, oldNextBtn);
-
-    elements.submitBtn = newSubmitBtn;
-    elements.nextBtn = newNextBtn;
-
-    // 重新綁定事件
-    elements.submitBtn.onclick = checkAnswer;
-    elements.nextBtn.onclick = () => {
-      currentIndex++;
-      if (currentIndex < allQuestionNumbers.length) {
-        // 重置介面狀態
-        document.querySelector(".options").style.display = "flex";
-        elements.submitBtn.style.display = "block";
-        elements.nextBtn.style.display = "none";
-        elements.feedbackDiv.classList.add("hidden");
-
-        loadQuestion(allQuestionNumbers[currentIndex]);
-      } else {
-        isReviewMode = false;
-        allQuestionNumbers = originalQuestions;
-        currentIndex = 0;
-
-        if (allQuestionNumbers.length > 0) {
-          loadQuestion(allQuestionNumbers[currentIndex]);
-          elements.submitBtn.onclick = checkAnswer;
-          elements.nextBtn.onclick = handleNormalNext;
-        } else {
-          showQuizComplete();
-        }
+  // 初始化題目列表
+  async function initializeQuestionList() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/questions/all`, {
+        ...fetchOptions,
+        method: "GET",
+      });
+      if (!response.ok) {
+        throw new Error("無法獲取題目列表");
       }
-    };
+      const questions = await response.json();
+      // 從返回的所有問題中提取問題編號
+      allQuestionNumbers = questions.map((q) => q.question_number);
+      // 隨機排序題目
+      shuffleArray(allQuestionNumbers);
+      // 重置索引
+      currentIndex = 0;
+      // 加載第一個問題
+      if (allQuestionNumbers.length > 0) {
+        loadQuestion(allQuestionNumbers[currentIndex++]);
+      } else {
+        showError("沒有可用的題目");
+      }
+    } catch (error) {
+      console.error("初始化題目列表失敗:", error);
+      showError("無法獲取題目列表，請稍後再試");
+      // 如果獲取所有題目失敗，直接獲取一個隨機題目
+      fetchRandomQuestion();
+    }
+  }
 
-    // 重置介面
-    document.querySelector(".options").style.display = "flex";
-    elements.submitBtn.style.display = "block";
-    elements.nextBtn.style.display = "none";
-    elements.feedbackDiv.classList.add("hidden");
+  // 輔助函數：隨機排序數組
+  function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
 
-    // 載入第一題重試題目
-    loadQuestion(allQuestionNumbers[0]);
+  // 添加事件監聽器
+  function setupEventListeners() {
+    // 監聽選項選擇
+    document.querySelectorAll('input[name="answer"]').forEach((radio) => {
+      radio.addEventListener("change", function () {
+        selectedAnswer = this.value;
+        elements.submitBtn.disabled = false;
+      });
+    });
+
+    // 監聽提交按鈕
+    elements.submitBtn.addEventListener("click", submitAnswer);
+
+    // 監聽下一題按鈕
+    elements.nextBtn.addEventListener("click", getRandomQuestion);
+
+    // 如果需要，可以在此添加錯題複習模式的切換按鈕監聽器
+    const reviewModeBtn = document.getElementById("review-mode-btn");
+    if (reviewModeBtn) {
+      reviewModeBtn.addEventListener("click", function () {
+        isReviewMode = !isReviewMode;
+        this.textContent = isReviewMode ? "返回普通模式" : "進入錯題複習";
+        // 根據模式重置和載入問題
+        if (isReviewMode) {
+          if (wrongAnswers.length === 0) {
+            showError("沒有錯題可複習");
+            isReviewMode = false;
+            this.textContent = "進入錯題複習";
+            return;
+          }
+          // 重置當前批次和索引
+          currentBatchWrongAnswers = [];
+          let count = 0;
+          // 最多取BATCH_SIZE個錯題
+          while (count < BATCH_SIZE && count < wrongAnswers.length) {
+            currentBatchWrongAnswers.push(wrongAnswers[count].questionNumber);
+            count++;
+          }
+          currentIndex = 0;
+          loadQuestion(currentBatchWrongAnswers[currentIndex++]);
+        } else {
+          // 重置索引並重新獲取題目
+          currentIndex = 0;
+          getRandomQuestion();
+        }
+      });
+    }
+
+    // 添加獲取用戶錯題集的功能
+    const loadWrongQuestionsBtn = document.getElementById(
+      "load-wrong-questions-btn"
+    );
+    if (loadWrongQuestionsBtn) {
+      loadWrongQuestionsBtn.addEventListener("click", async function () {
+        try {
+          const response = await fetch(`${API_BASE_URL}/user/wrong-questions`, {
+            ...fetchOptions,
+            method: "GET",
+          });
+          if (!response.ok) {
+            throw new Error("無法獲取錯題集");
+          }
+          const wrongQuestions = await response.json();
+          // 清空當前錯題記錄
+          wrongAnswers = [];
+          currentBatchWrongAnswers = [];
+          // 將服務器返回的錯題轉換為本地格式並添加到錯題列表
+          wrongQuestions.forEach((wq) => {
+            wrongAnswers.push({
+              questionNumber: wq.question_number,
+              wrongAnswer: wq.wrong_answer,
+              correctAnswer: wq.correct_answer,
+            });
+            currentBatchWrongAnswers.push(wq.question_number);
+          });
+          // 切換到錯題複習模式
+          isReviewMode = true;
+          if (reviewModeBtn) {
+            reviewModeBtn.textContent = "返回普通模式";
+          }
+          // 重置索引並加載第一個錯題
+          currentIndex = 0;
+          if (currentBatchWrongAnswers.length > 0) {
+            loadQuestion(currentBatchWrongAnswers[currentIndex++]);
+          } else {
+            showError("沒有錯題可複習");
+          }
+        } catch (error) {
+          console.error("獲取錯題集失敗:", error);
+          showError("無法獲取錯題集，請稍後再試");
+        }
+      });
+    }
+
+    // 添加模擬考試功能
+    const startExamBtn = document.getElementById("start-exam-btn");
+    if (startExamBtn) {
+      startExamBtn.addEventListener("click", function () {
+        // 實現模擬考試功能...
+      });
+    }
   }
 
   // 初始化
-  updateScore();
-  initializeQuestions();
+  function initialize() {
+    setupEventListeners();
+    initializeQuestionList();
+    updateScore();
+  }
+
+  // 啟動
+  initialize();
 });
