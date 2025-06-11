@@ -28,10 +28,12 @@ app = Flask(__name__,
 app.secret_key = secrets.token_hex(16)
 
 # 設置會話的cookie選項，增強安全性
-app.config['SESSION_COOKIE_SECURE'] = False  # 在生產環境中應該設為True
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = None  # 允許跨站點 cookie
-app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 設置會話有效期為1天（秒）
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # 修改為 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400
+app.config['SESSION_COOKIE_NAME'] = 'ceh_session'  # 添加明確的 session cookie 名稱
+app.config['SESSION_TYPE'] = 'filesystem'  # 使用文件系統儲存 session
 
 # 允許所有來源的 CORS 請求
 CORS(app, 

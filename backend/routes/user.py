@@ -21,33 +21,49 @@ def register():
     email = data.get('email')
     
     if not username or not password or not email:
-        return add_cors_headers(jsonify({'error': 'Missing required fields'})), 400
+        return add_cors_headers(jsonify({
+            'error': '所有欄位都是必填的',
+            'status': 'error'
+        })), 400
     
     # 對密碼進行加密
     hashed_password = generate_password_hash(password)
     
     conn = get_db_connection()
     if not conn:
-        return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
+        return add_cors_headers(jsonify({
+            'error': '資料庫連接錯誤',
+            'status': 'error'
+        })), 500
     
     try:
         cursor = conn.cursor()
         try:
-            # 設置默認用戶級別為免費版（ID為1）
+            # 使用預設的 user_tier_id = 1 (免費版)
             cursor.execute('''
-                INSERT INTO users (username, password, email, user_tier_id, remaining_daily_questions) 
-                VALUES (%s, %s, %s, 1, 10)
+                INSERT INTO users (username, password, email, user_tier_id)
+                VALUES (%s, %s, %s, 1)
             ''', (username, hashed_password, email))
             conn.commit()
-            return add_cors_headers(jsonify({'message': 'User registered successfully'}))
+            
+            return add_cors_headers(jsonify({
+                'message': '註冊成功',
+                'status': 'success',
+                'redirect': '/login'
+            }))
+            
         except mysql.connector.IntegrityError as e:
-            # 處理用戶名或郵箱已存在的情況
             if 'Duplicate entry' in str(e):
                 if 'username' in str(e):
-                    return add_cors_headers(jsonify({'error': 'Username already exists'})), 409
+                    error_message = '此使用者名稱已被使用'
                 elif 'email' in str(e):
-                    return add_cors_headers(jsonify({'error': 'Email already exists'})), 409
-            return add_cors_headers(jsonify({'error': str(e)})), 500
+                    error_message = '此電子郵件已被註冊'
+                else:
+                    error_message = '註冊資訊重複'
+                return add_cors_headers(jsonify({
+                    'error': error_message,
+                    'status': 'error'
+                })), 409
     finally:
         if 'cursor' in locals():
             cursor.close()
@@ -56,95 +72,84 @@ def register():
 
 @user_bp.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    email = data.get('email')  # 改為使用 email 登入
-    password = data.get('password')
-    
-    print(f"Login attempt for email: {email}")
-    
-    if not email or not password:
-        print("Missing email or password")
-        return add_cors_headers(jsonify({'error': 'Missing email or password'})), 400
-    
-    conn = get_db_connection()
-    if not conn:
-        print("Database connection failed")
-        return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
-    
     try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute('''
-            SELECT u.id, u.username, u.password, u.email, u.user_tier_id, u.remaining_daily_questions, u.is_admin,
-                   t.tier_name, t.daily_quiz_limit, t.has_advanced_analytics, 
-                   t.has_wrong_questions_review, t.has_mock_exam, t.question_bank_size
-            FROM users u
-            JOIN user_tiers t ON u.user_tier_id = t.id
-            WHERE u.email = %s
-        ''', (email,))
-        user = cursor.fetchone()
+        data = request.json
+        email = data.get('email')
+        password = data.get('password')
         
-        if not user:
-            print(f"User not found with email: {email}")
-            return add_cors_headers(jsonify({'error': 'Invalid email or password'})), 401
+        print(f"Login attempt for email: {email}")
         
-        is_valid = check_password_hash(user['password'], password)
-        print(f"Password validation: {is_valid}")
+        if not email or not password:
+            return add_cors_headers(jsonify({
+                'error': '請提供電子郵件和密碼',
+                'status': 'error'
+            })), 400
         
-        if not is_valid:
-            print("Invalid password")
-            return add_cors_headers(jsonify({'error': 'Invalid email or password'})), 401
+        conn = get_db_connection()
+        if not conn:
+            return add_cors_headers(jsonify({
+                'error': '資料庫連接錯誤',
+                'status': 'error'
+            })), 500
         
-        # 檢查用戶每日題目限制是否需要重置
-        check_and_reset_daily_limit(user['id'], user['daily_quiz_limit'])
-              # 登入成功，設置會話
-        is_admin = user['is_admin']
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['email'] = user['email']
-        session['user_tier_id'] = 3 if is_admin else user['user_tier_id']
-        session['tier_name'] = '專業版' if is_admin else user['tier_name']
-        session['remaining_daily_questions'] = 999 if is_admin else user['remaining_daily_questions']
-        session['daily_quiz_limit'] = 999 if is_admin else user['daily_quiz_limit']
-        session['has_advanced_analytics'] = True if is_admin else user['has_advanced_analytics']
-        session['has_wrong_questions_review'] = True if is_admin else user['has_wrong_questions_review']
-        session['has_mock_exam'] = True if is_admin else user['has_mock_exam']
-        session['question_bank_size'] = 999 if is_admin else user['question_bank_size']
-        session['is_admin'] = is_admin
-        session.modified = True  # 確保會話被保存print(f"Login successful for: {user['email']}")
-        
-        # 檢查是否有next參數用於重定向
-        next_url = data.get('next')
-        
-        response = jsonify({
-            'message': 'Login successful',
-            'user': {
-                'id': user['id'],
-                'username': user['username'],
-                'email': user['email'],
-                'is_admin': user['is_admin'],
-                'tier': {
-                    'id': user['user_tier_id'],
-                    'name': user['tier_name'],
-                    'remaining_daily_questions': user['remaining_daily_questions'],
-                    'daily_quiz_limit': user['daily_quiz_limit'],
-                    'has_advanced_analytics': user['has_advanced_analytics'],
-                    'has_wrong_questions_review': user['has_wrong_questions_review'],
-                    'has_mock_exam': user['has_mock_exam'],
-                    'question_bank_size': user['question_bank_size']
-                }
-            },
-            'redirect': next_url if next_url else '/'  # 更改為首頁
-        })
-        
-        return add_cors_headers(response)
-        
-    except mysql.connector.Error as e:
-        return add_cors_headers(jsonify({'error': str(e)})), 500
-    finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute('''
+                SELECT u.*, ut.* FROM users u
+                JOIN user_tiers ut ON u.user_tier_id = ut.id
+                WHERE u.email = %s
+            ''', (email,))
+            
+            user = cursor.fetchone()
+            
+            if user and check_password_hash(user['password'], password):
+                # 登入成功，設置會話
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['user_tier'] = user['tier_name']
+                session['is_admin'] = user.get('is_admin', 0)
+                session['has_advanced_analytics'] = user['has_advanced_analytics']
+                session['has_wrong_questions_review'] = user['has_wrong_questions_review']
+                session['has_mock_exam'] = user['has_mock_exam']
+                session.permanent = True
+                
+                # 檢查並重置每日題目限制
+                check_and_reset_daily_limit(user['id'], user['daily_quiz_limit'])
+                
+                return add_cors_headers(jsonify({
+                    'message': '登入成功',
+                    'status': 'success',
+                    'redirect': '/dashboard',
+                    'user': {
+                        'id': user['id'],
+                        'username': user['username'],
+                        'email': user['email'],
+                        'tier': user['tier_name']
+                    }
+                }))
+            else:
+                return add_cors_headers(jsonify({
+                    'error': '電子郵件或密碼錯誤',
+                    'status': 'error'
+                })), 401
+                
+        except mysql.connector.Error as e:
+            print(f"Database error during login: {e}")
+            return add_cors_headers(jsonify({
+                'error': '資料庫錯誤',
+                'status': 'error'
+            })), 500
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
             conn.close()
+            
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        return add_cors_headers(jsonify({
+            'error': '登入過程發生錯誤',
+            'status': 'error'
+        })), 500
 
 # 檢查並重置用戶每日題目限制
 def check_and_reset_daily_limit(user_id, daily_limit):
@@ -203,96 +208,6 @@ def get_user():
             'username': session['username']
         }
     }))
-
-@user_bp.route('/api/user/check-session', methods=['GET', 'OPTIONS'])
-def check_session():
-    if request.method == 'OPTIONS':
-        response = jsonify({'status': 'ok'})
-        return add_cors_headers(response)
-    
-    print("Checking session state:", session)  # 添加調試日誌
-    
-    if 'user_id' in session:
-        try:
-            conn = get_db_connection()
-            if not conn:
-                return add_cors_headers(jsonify({'error': 'Database connection failed'})), 500
-                
-            # Reset the user's session with admin privileges if they are an admin
-            if session.get('is_admin', False):
-                session['tier_name'] = '專業版'
-                session['has_advanced_analytics'] = True
-                session['has_wrong_questions_review'] = True
-                session['has_mock_exam'] = True
-                session['daily_quiz_limit'] = 999
-                session['question_bank_size'] = 999
-                session.modified = True
-                print("Admin privileges set in session")
-            
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute('''
-                SELECT u.id, u.username, u.email, u.user_tier_id, u.is_admin,
-                       t.tier_name, t.daily_quiz_limit, t.has_advanced_analytics, 
-                       t.has_wrong_questions_review, t.has_mock_exam, t.question_bank_size
-                FROM users u
-                JOIN user_tiers t ON u.user_tier_id = t.id
-                WHERE u.id = %s
-            ''', (session['user_id'],))
-            
-            user = cursor.fetchone()
-            if user:
-                # 更新會話中的用戶信息
-                session['user_id'] = user['id']
-                session['username'] = user['username']
-                session['email'] = user['email']
-                session['user_tier_id'] = user['user_tier_id']
-                session['is_admin'] = user['is_admin']
-                session['tier_name'] = 'Professional' if user['is_admin'] else user['tier_name']
-                session['has_advanced_analytics'] = True if user['is_admin'] else user['has_advanced_analytics']
-                session['has_wrong_questions_review'] = True if user['is_admin'] else user['has_wrong_questions_review']
-                session['has_mock_exam'] = True if user['is_admin'] else user['has_mock_exam']
-                session['daily_quiz_limit'] = 999 if user['is_admin'] else user['daily_quiz_limit']
-                session['question_bank_size'] = 999 if user['is_admin'] else user['question_bank_size']
-                session.modified = True
-                
-                print(f"Session updated for user {user['username']}, is_admin: {user['is_admin']}")  # 調試日誌
-                
-                return add_cors_headers(jsonify({
-                    'status': 'authenticated',
-                    'user_id': user['id'],
-                    'username': user['username'],
-                    'email': user['email'],
-                    'is_admin': user['is_admin'],
-                    'tier': {
-                        'id': user['user_tier_id'],
-                        'name': user['tier_name'],
-                        'daily_quiz_limit': user['daily_quiz_limit'],
-                        'has_advanced_analytics': user['has_advanced_analytics'],
-                        'has_wrong_questions_review': user['has_wrong_questions_review'],
-                        'has_mock_exam': user['has_mock_exam'],
-                        'question_bank_size': user['question_bank_size']
-                    }
-                }))
-            else:
-                session.clear()
-                return add_cors_headers(jsonify({
-                    'status': 'unauthenticated',
-                    'redirect': '/login'
-                })), 401
-                
-        except Exception as e:
-            print(f"Error checking session: {str(e)}")  # 添加錯誤日誌
-            return add_cors_headers(jsonify({'error': str(e)})), 500
-        finally:
-            if 'cursor' in locals():
-                cursor.close()
-            if conn:
-                conn.close()
-    else:
-        return add_cors_headers(jsonify({
-            'status': 'unauthenticated',
-            'redirect': '/login'
-        })), 401
 
 # 用戶錯題本
 @user_bp.route('/api/user/wrong-questions', methods=['GET'])

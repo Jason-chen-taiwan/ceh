@@ -1,16 +1,25 @@
+import os
+from mysql.connector import pooling
+from dotenv import load_dotenv
 import mysql.connector
 
+# 載入環境變數
+load_dotenv()
+
+DB_CONFIG = {
+    'host': os.getenv('DB_HOST', '127.0.0.1'),
+    'port': int(os.getenv('DB_PORT', 3306)),
+    'user': os.getenv('DB_USER', 'root'),
+    'password': os.getenv('DB_PASSWORD', ''),
+    'database': os.getenv('DB_NAME', 'ceh_quiz'),
+    'pool_name': 'mypool',
+    'pool_size': 5
+}
+
 def get_db_connection():
-    db_config = {
-        'host': '127.0.0.1',
-        'port': 3306,
-        'user': 'root',
-        'password': 'mysqIg0zIn7hour',
-        'database': 'ceh_quiz'
-    }
     try:
-        conn = mysql.connector.connect(**db_config)
-        return conn
+        connection_pool = mysql.connector.pooling.MySQLConnectionPool(**DB_CONFIG)
+        return connection_pool.get_connection()
     except mysql.connector.Error as e:
         print(f"Database connection error: {e}")
         return None
